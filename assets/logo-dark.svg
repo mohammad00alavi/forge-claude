@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 150" width="360" role="img" aria-label="Forge">
+  <title>Forge</title>
+  <defs>
+    <linearGradient id="ember" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffac4a"/>
+      <stop offset="1" stop-color="#f04a39"/>
+    </linearGradient>
+  </defs>
+  <rect x="12" y="25" width="100" height="100" rx="26" fill="url(#ember)"/>
+  <path d="M62 46 Q68 67 90 75 Q68 83 62 104 Q56 83 34 75 Q56 67 62 46 Z" fill="#ffffff"/>
+  <text x="134" y="98" font-family="'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif" font-size="76" font-weight="700" letter-spacing="-3" fill="#f0f6fc">Forge</text>
+</svg>
