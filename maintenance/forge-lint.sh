@@ -64,7 +64,7 @@ for c in "$CFG"/commands/*.md; do
   [ -f "$CFG/evals/$b.md" ] || { warn "no eval suite for /$b"; emiss=1; }
 done
 [ "$emiss" = 0 ] && pass "every command (except /start) has an eval suite" \
-                 || warn "some commands lack an eval suite (see WARN)"
+                 || bad  "some commands lack an eval suite (see WARN)"
 
 # 7. The eval baseline is established (no _unrun_).
 if grep -q '_unrun_' "$CFG"/evals/BASELINE.md 2>/dev/null; then
