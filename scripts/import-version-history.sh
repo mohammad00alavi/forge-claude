@@ -34,14 +34,14 @@ git rm -rf --quiet . >/dev/null 2>&1 || true
 
 for entry in "${SNAPS[@]}"; do
   tag="${entry%%|*}"; rel="${entry#*|}"; src="$SNAP_ROOT/$rel"
+  if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+    echo "  abort — tag $tag already exists (refusing to overwrite)"; exit 1
+  fi
   if [ ! -d "$src" ]; then echo "  skip $tag — missing: $src"; continue; fi
   find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
   cp -a "$src"/. .
   git add -A
   git commit -q -m "Forge $tag (reconstructed from dist snapshot)"
-  if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
-    echo "  abort — tag $tag already exists (refusing to overwrite)"; exit 1
-  fi
   git tag "$tag" >/dev/null
   echo "  committed + tagged $tag"
 done
