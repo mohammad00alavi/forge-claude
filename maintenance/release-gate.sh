@@ -18,7 +18,7 @@ else no "forge-lint failed — run: bash maintenance/forge-lint.sh"; fi
 # 2. Version markers agree with the requested version (catches stale self-descriptions).
 grep -q "version-$V" README.md   2>/dev/null && ok "README badge = $V"        || no "README badge != $V (bump the version- badge)"
 grep -q "Forge v$V"  install.sh  2>/dev/null && ok "install.sh = v$V"          || no "install.sh != v$V (bump the echo line)"
-grep -q "v$V"        CHANGELOG.md 2>/dev/null && ok "CHANGELOG mentions v$V"    || no "CHANGELOG has no v$V section"
+grep -q "| v$V |"    CHANGELOG.md 2>/dev/null && ok "CHANGELOG row = v$V"        || no "CHANGELOG has no version-history row for v$V (add it + a dated section)"
 
 # 3. Eval baseline established (the gate exists; the daily self-review keeps it green).
 if grep -q '_unrun_' claude-config/evals/BASELINE.md 2>/dev/null; then
