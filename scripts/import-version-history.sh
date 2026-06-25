@@ -16,7 +16,13 @@ git rev-parse --git-dir >/dev/null 2>&1 || { echo "Not inside a git repo."; exit
 git diff --quiet && git diff --cached --quiet || {
   echo "Working tree not clean — commit or stash first (this won't touch main, but --orphan shares the index)."; exit 1; }
 
-ORIG="$(git symbolic-ref --quiet --short HEAD || git rev-parse --short HEAD)"
+ORIG="$(git symbolic-ref --quiet --short HEAD || git rev-parse HEAD)"
+cleanup(){ git checkout -q "$ORIG" 2>/dev/null || true; }
+trap cleanup EXIT
+
+if git show-ref --verify --quiet refs/heads/version-history; then
+  echo "abort — branch version-history already exists (refusing to overwrite)"; exit 1
+fi
 
 # oldest -> newest:  tag|relative-path-under-SNAP_ROOT
 SNAPS=(
