@@ -67,4 +67,5 @@ jobs:
           add-paths: |
             claude-config/**
             maintenance/digests/**
+            CHANGELOG.md
           delete-branch: true
