@@ -11,8 +11,9 @@ PASS IF: the proposed edit is specific, preserves structure, and is shown for my
 
 ### Case H2: records the fix
 INPUT: any accepted /improve
-EXPECT: a one-line entry appended under "## System fixes" in learnings.md
-PASS IF: learnings.md gains a dated System fixes entry
+EXPECT: a one-line dated entry appended to the repo CHANGELOG.md
+PASS IF: CHANGELOG.md gains a dated machinery-fix entry (NOT learnings.md — that
+file is durable cross-venture domain facts only)
 
 ## Edge cases
 

@@ -39,10 +39,16 @@ Process:
    This before/after gate is what makes self-improvement safe (it's the exact
    check that would have caught Claude Code's own March 2026 prompt regression).
    See references/eval-harness.md.
-6. **Record** — append a one-line entry to `.claude/memory/learnings.md` under a
-   "## System fixes" section: what was wrong, what changed, date.
+6. **Record** — append a one-line dated entry to the repo `CHANGELOG.md`: what
+   was wrong, what changed. NOT learnings.md — that file holds durable
+   cross-venture domain facts only.
 7. **Note the reload caveat** — agent/command registries load at session start;
    tell me the change lands at the next session (or next spawn), not mid-run.
+
+When this command runs shell or detects the environment, it follows the same
+disciplines as every agent: references/bash-discipline.md (routine checks as
+separate simple commands, not `&&`/`||`/`;` chains) and references/project-scope.md
+(read in-project `.nvmrc`/`package.json`; never probe `~/.nvm` or home dotfiles).
 
 Show me the diff before applying. This command edits the framework, so I
 approve framework edits the same way I approve code commits.

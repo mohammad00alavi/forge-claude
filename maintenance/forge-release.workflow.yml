@@ -1,0 +1,56 @@
+# Forge release — tag-on-demand. Human-triggered; CI does the mechanics.
+#
+# INSTALL: cp maintenance/forge-release.workflow.yml .github/workflows/forge-release.yml
+#
+# You trigger it (Actions tab → Forge release → Run workflow → enter the version).
+# It GATES (lint + version-marker consistency + eval baseline established + tag
+# free), then creates the annotated tag and publishes a GitHub Release. It does
+# NOT edit source and does NOT pick the version — bump the markers first
+# (README badge, install.sh, a CHANGELOG section), per RELEASING.md.
+name: Forge release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, e.g. 3.9 (bump README badge + install.sh + add a CHANGELOG section first — see RELEASING.md)"
+        required: true
+
+permissions:
+  contents: write     # push the tag + create the Release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history + tags for the gate and release notes
+
+      - name: Release gate (lint + version consistency + baseline + tag-free)
+        run: bash maintenance/release-gate.sh "${{ inputs.version }}"
+
+      # OPTIONAL behavioural gate — re-run the eval suite vs BASELINE before tagging.
+      # Needs the ANTHROPIC_API_KEY secret. The daily self-review already keeps the
+      # baseline green, so this is belt-and-suspenders; uncomment to enable.
+      # - uses: actions/setup-node@v4
+      #   with: { node-version: 'lts/*' }
+      # - name: Eval gate
+      #   env: { ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}" }
+      #   run: |
+      #     npm install -g @anthropic-ai/claude-code
+      #     mkdir -p .claude && cp -r claude-config/. .claude/
+      #     claude -p "Run every suite in claude-config/evals against BASELINE.md; exit non-zero if any capability drops 2+ cases." --permission-mode acceptEdits
+
+      - name: Tag the release
+        env:
+          V: ${{ inputs.version }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v$V" -m "Forge v$V"
+          git push origin "v$V"
+
+      - name: Publish the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "v${{ inputs.version }}" --title "Forge v${{ inputs.version }}" --generate-notes

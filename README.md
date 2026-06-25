@@ -9,7 +9,7 @@
 
 [Install](#install) · [How it works](#how-it-works) · [The team](#the-team) · [Cost model](#cost-model) · [Commands](#commands)
 
-![version](https://img.shields.io/badge/version-3.8-2563eb)
+![version](https://img.shields.io/badge/version-3.9-2563eb)
 ![built for](https://img.shields.io/badge/built%20for-Claude%20Code-8A2BE2)
 ![license](https://img.shields.io/badge/license-MIT-3fb950)
 ![stars](https://img.shields.io/github/stars/mohammad00alavi/forge-claude?style=flat&color=f5a623)
@@ -282,8 +282,10 @@ Five load-bearing walls hold the whole system together:
 2. **The gate gates the merge.** Objective checks (typecheck, lint, test, build)
    run before merge and acceptance criteria are re-checked after. "Looks done" is
    not a gate.
-3. **Path variables, never hardcoded paths.** Agents receive `$VENTURE`, `$STATE`,
-   `$WORKTREE` — locations can move without rewriting every agent.
+3. **One canonical path layout.** Every venture uses the same fixed file layout
+   (`ventures/<slug>/STATE.md`, `.claude/handoffs/<slug>.md`, …), so no agent
+   invents its own location for state — a convention kept consistent across the
+   config, not runtime variables.
 4. **Worktree isolation.** Every parallel builder gets its own worktree, branch,
    and ports. No collisions, no dirty `main`.
 5. **Self-improvement at the source.** When the machinery is wrong, you fix the

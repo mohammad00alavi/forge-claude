@@ -141,3 +141,7 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Private working artifacts — internal audit + memory seed, not for the public repo
+/FORGE-EVALUATION-2026-06-22.md
+/learnings-seed-from-ventures.md

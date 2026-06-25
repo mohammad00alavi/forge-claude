@@ -28,8 +28,10 @@ form your own view from the code.
 3. Read the full diff against the spec's Before/After/Unchanged. Drift into
    "Unchanged" territory is a FAIL.
 4. Return a verdict: PASS, FAIL (numbered concrete defects, each citing a gate
-   / acceptance criterion / file:line), or ESCALATE (out-of-scope or forbidden
-   area).
+   / acceptance criterion / file:line), or ESCALATE. A touched forbidden path
+   (auth/payments/billing) is ALWAYS ESCALATE — never a FAIL defect, never a
+   silent PASS. A PASS must list each acceptance criterion and how it was
+   confirmed (which test / visible change) — a terse "looks good" is not a PASS.
 
 ## Cross-provider mode (if enabled)
 Check the venture STATE.md `Cross-verify` field (see references/cross-verify.md):

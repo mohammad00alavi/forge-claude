@@ -10,7 +10,7 @@ description: >
   /assess, /brainstorm, /architect, /forge, /gtm, or /improve command.
 ---
 
-# Forge Playbook (v2)
+# Forge Playbook
 
 Take an idea from zero to sellable, spending exactly as much effort as the
 project's difficulty justifies — and get *better at estimating that* every time
@@ -105,6 +105,9 @@ approves the tier before spend. Rationale + 70/20/10 cost pattern:
 | T3 | + devops + ui-ux + sales | Opus/high | Sonnet/high | Haiku/med | full GTM |
 | T4 | + compliance + 2nd verifier | Opus/xhigh | Opus/med | Sonnet/med | + compliance |
 
+> A regulated domain (fintech/health/legal) rosters **compliance at T3**, not
+> only T4 — domain pulls it in, not just tier.
+
 Effort ladder (`effort:` frontmatter): low -> medium -> high -> xhigh. Default
 high; drop for mechanical work; xhigh only for T4 ambiguity. Never run T0 on
 Opus.
@@ -130,8 +133,9 @@ These are non-negotiable. Full text: `references/five-walls.md`.
    nothing. (Hook adapted from mattpocock's git-guardrails.)
 2. The gate gates the merge - objective (typecheck/lint/test/build) before and
    after; opinions and "looks done" do not count.
-3. Path variables, never hardcoded paths - `$VENTURE`, `$VDIR`, `$STATE`,
-   `$WORKTREE`, `$LEDGER`, `$LEARNINGS`.
+3. One canonical path layout (a fixed convention, not variables) -
+   `ventures/<slug>/STATE.md`, `.claude/handoffs/<slug>.md`,
+   `.claude/memory/learnings.md`. One known location per kind of state.
 4. Worktree isolation for parallel builders - no file collisions.
 5. Self-improvement at the source - fix bad agent/command files via `/improve`,
    gated by a prompt-quality check.
@@ -151,7 +155,8 @@ Anthropic's "outcomes" pattern: state what "good" looks like, grade against it.
 ## Hard rules (never relax)
 
 1. Difficulty assessed before building; tier approved before spend.
-2. The maker never grades its own work.
+2. The maker never grades its own work — an independent grader checks it (T1+).
+   (T0 has no separate grader; its gate is simply that the build compiles/renders.)
 3. The five walls above.
 4. Forbidden to agents (denied/gated): pushing to remote, merges, deploys,
    spending money, publishing public content — these are DENIED (push/merge/

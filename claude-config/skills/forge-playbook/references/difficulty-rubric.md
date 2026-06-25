@@ -22,6 +22,9 @@ doesn't need.
 - **1** Simple CRUD, one or two entities.
 - **2** Relational data, non-trivial state, caching/sync.
 - **3** Complex data model, migrations, consistency/scale concerns.
+> Multi-user / shared-write / any permissions model = **≥ 2** here: the
+> concurrency + permissions logic is the real complexity, even behind a simple
+> UI (e.g. "a shared to-do list my team can all edit" is not a T0).
 
 ## Axis 4 — Integration surface (external systems)
 - **0** None — self-contained.

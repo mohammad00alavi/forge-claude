@@ -1,0 +1,70 @@
+# Forge self-review — daily automated maintenance.
+#
+# INSTALL: copy this file into .github/workflows/ and push:
+#     cp maintenance/forge-self-review.workflow.yml .github/workflows/forge-self-review.yml
+# Then add the ANTHROPIC_API_KEY secret (only the self-review job needs it).
+#
+# Two jobs:
+#   health      — deterministic consistency lint. No secret, no cost. Catches the
+#                 audit-class regressions on every run. START HERE.
+#   self-review — LLM pass: runs the eval gate, proposes gated machinery fixes,
+#                 opens a PR. Needs ANTHROPIC_API_KEY. It can EDIT and open a PR
+#                 but NEVER pushes/merges (Forge's deny-list holds in CI too) —
+#                 you review + merge. Comment it out to run health-only first.
+name: Forge self-review
+on:
+  schedule:
+    - cron: '0 7 * * *'     # daily 07:00 UTC — adjust to taste
+  workflow_dispatch: {}      # allow manual runs from the Actions tab
+
+permissions:
+  contents: write            # commit the digest / fix branch
+  pull-requests: write       # open the review PR
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Forge consistency lint (fails on a regression)
+        run: bash maintenance/forge-lint.sh
+
+  self-review:
+    needs: health
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+      - name: Set up Claude Code + Forge config in the runner
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          mkdir -p .claude
+          cp -r claude-config/. .claude/
+          cp maintenance/self-review.command.md .claude/commands/self-review.md
+      - name: Run the self-review (headless)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        # NOTE: verify the exact headless invocation against the current Claude
+        # Code docs — the CLI/Action API evolves. Intent: run Claude Code on the
+        # self-review prompt, allowing file edits but not push. Forge's own
+        # settings.json deny-list (copied into .claude above) keeps push/merge/
+        # deploy blocked even here, so the wall holds in CI too.
+        run: |
+          claude -p "$(cat maintenance/self-review.md)" --permission-mode acceptEdits || true
+      - name: Open a PR with the digest + any gated fixes
+        uses: peter-evans/create-pull-request@v6
+        with:
+          branch: forge/self-review
+          commit-message: "chore: forge self-review digest + gated fixes"
+          title: "Forge self-review (automated)"
+          body: |
+            Automated daily self-review.
+            - Digest: `maintenance/digests/`
+            - Any machinery fix here passed the eval gate (eval-before/after).
+            Review before merging — the agent never merges or cuts a release.
+          add-paths: |
+            claude-config/**
+            maintenance/digests/**
+          delete-branch: true

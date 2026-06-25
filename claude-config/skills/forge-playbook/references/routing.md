@@ -56,5 +56,14 @@ human's review bandwidth, not the tool. Rules:
 - **T4**: + compliance(opus/med) + a second independent verifier(sonnet/med);
   orchestrator on opus/xhigh for the ambiguous reasoning.
 
+> Compliance is rostered by *domain*, not only by tier: a regulated domain
+> (fintech/health/legal) pulls a compliance agent in at **T3** too — don't wait
+> for T4 (rule 3 above).
+
 These are defaults the architect can adjust per project. When in doubt, fewer
 agents and a tighter loop beats a big swarm you can't review.
+
+> The authoritative model for each agent is the `model:` line in its own
+> frontmatter (`.claude/agents/<agent>.md`) — that's what actually runs and what
+> the routing ledger reads. This table is the roster/tier guide; if the two ever
+> disagree, the frontmatter wins.

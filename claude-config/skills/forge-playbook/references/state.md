@@ -11,6 +11,7 @@ progression so the system compounds instead of just accumulating.
 - Tier: T2 (score 7/15) · approved <date>
 - Value prop: <one line>
 - Stack: <decided by architect>
+- Gates: <typecheck/lint/test/build commands — or `MISSING` if none defined>
 - Cross-verify: none   # or `codex`/`gemini` to add cross-provider review (see references/cross-verify.md)
 - Roster: architect, builder, verifier(haiku), pm, marketer, manager
 - Stage: forge (engineering 3/5 features, business track in progress)
@@ -53,6 +54,25 @@ sessions re-derive the same dead ends.>
 ## Last session (resume pointer)
 <date · what was done · what's next>
 ```
+
+## Lean STATE (T0/T1 — don't over-build the bookkeeping)
+
+The template above is for T2+. At T0/T1, an elaborate state file is itself
+Forge's #1 failure mode (over-engineering). Use this minimal form:
+
+```markdown
+# Venture · <slug>
+- Tier: T0 (score _/15) · approved <date>
+- Value prop: <one line>
+- Stack: <decided by architect>
+- Gates: <test/build commands, or `MISSING`>
+- Status: <building | done | shipped>
+- Next: <the single next action>
+- Dead ends: <what not to retry, or "none">
+- Escalated: <anything needing the human, or "none">
+```
+
+Promote to the full template only if the venture grows past T1.
 
 Two operational rules:
 - **Write before walking away.** A stage that ends without updating STATE.md

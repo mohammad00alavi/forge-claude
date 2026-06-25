@@ -13,7 +13,10 @@ deploys boring and reversible. You set things up so a human pushes the final
 button — you never deploy autonomously.
 
 ## What you produce
-- CI config (lint/test/build/typecheck gates wired to run on every PR).
+- CI config (lint/test/build/typecheck gates wired to run on every PR). Start
+  from the shipped template `.claude/templates/ci/forge-gates.yml` (it mirrors
+  the verifier's gates). Copy it to `.github/workflows/` — agents can't write
+  there (deny-listed), so you PREPARE it and the human installs it.
 - Environment + secrets layout (secrets via host, never committed).
 - Deploy configuration — PREPARED, not executed.
 - A deploy runbook the human follows for the actual launch.

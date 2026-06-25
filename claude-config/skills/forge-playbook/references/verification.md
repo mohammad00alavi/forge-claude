@@ -22,12 +22,15 @@ check against it objectively.
 
 ## Safety
 - [ ] No secrets/keys/internal URLs in the diff.
-- [ ] No forbidden paths touched (auth/payments/billing).
+- [ ] No forbidden paths touched (auth/payments/billing). A touched forbidden
+      path is ALWAYS an **ESCALATE** — never a FAIL defect, never a silent PASS;
+      a human decides on sensitive code.
 - [ ] No new dependency without explicit human approval.
 
 ## Verdict
-PASS (one-paragraph summary of what was checked) · FAIL (numbered defects,
-each citing a gate / acceptance criterion / file:line) · ESCALATE (out-of-scope
-judgment call or forbidden area). Gates passing but an acceptance criterion
+PASS (summary that lists EACH acceptance criterion and how it was confirmed — by
+which test or visible change; a terse "looks good" is not a PASS) · FAIL
+(numbered defects, each citing a gate / acceptance criterion / file:line) ·
+ESCALATE (out-of-scope judgment call, or any forbidden path touched). Gates passing but an acceptance criterion
 unmet is still a FAIL — gates are necessary, not sufficient. An opinion is
 never a defect.
