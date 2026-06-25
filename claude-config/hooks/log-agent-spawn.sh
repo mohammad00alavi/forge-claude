@@ -1,7 +1,7 @@
 #!/bin/bash
 # Forge model-routing logger. Fires PreToolUse on the Task tool and appends one
-# line per agent spawn to the current venture's routing ledger, so the 70/20/10
-# model mix is actually MEASURABLE (the audit found it was only ever a target,
+# line per agent spawn to the most recently modified venture's routing ledger, so
+# the 70/20/10 model mix is actually MEASURABLE (the audit found it was only ever a target,
 # never measured). Logging only — it NEVER blocks a spawn (always exits 0).
 #
 # The model is read from the spawned agent's OWN frontmatter
