@@ -52,7 +52,7 @@ jobs:
         # settings.json deny-list (copied into .claude above) keeps push/merge/
         # deploy blocked even here, so the wall holds in CI too.
         run: |
-          claude -p "$(cat maintenance/self-review.md)" --permission-mode acceptEdits || true
+          claude -p "$(cat maintenance/self-review.md)" --permission-mode acceptEdits
       - name: Open a PR with the digest + any gated fixes
         uses: peter-evans/create-pull-request@v6
         with:
