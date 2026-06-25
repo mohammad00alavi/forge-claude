@@ -7,7 +7,7 @@ mkdir -p "$TARGET/.claude"
 cp -rv "$HERE/claude-config/." "$TARGET/.claude/" 2>/dev/null || cp -rv "$HERE/.claude/." "$TARGET/.claude/"
 [ -d "$TARGET/ventures" ] || cp -rv "$HERE/ventures" "$TARGET/ventures" 2>/dev/null || true
 # Ensure hook scripts are executable (zip may not preserve the bit)
-if [ -d "$TARGET/.claude/hooks" ]; then
+if [ -d "$TARGET/.claude/hooks" ] && compgen -G "$TARGET/.claude/hooks/*.sh" >/dev/null; then
   chmod +x "$TARGET"/.claude/hooks/*.sh 2>/dev/null || true
   echo "  (made hook scripts executable)"
 fi
