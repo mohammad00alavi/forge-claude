@@ -50,12 +50,16 @@ else bad "settings.json is missing a wall (push/merge/deploy) or the settings-ed
 
 # 5. Every reference cited in SKILL.md exists on disk.
 SKILL=$(find "$CFG"/skills -name SKILL.md 2>/dev/null | head -1)
-miss=0
-for ref in $(grep -oE 'references/[a-z0-9-]+\.md' "$SKILL" 2>/dev/null | sort -u); do
-  [ -f "$(dirname "$SKILL")/$ref" ] || { warn "SKILL.md cites missing $ref"; miss=1; }
-done
-[ "$miss" = 0 ] && pass "every reference cited in SKILL.md exists" \
-               || bad  "SKILL.md cites a missing reference (see WARN)"
+if [ -z "$SKILL" ] || [ ! -f "$SKILL" ]; then
+  bad "no SKILL.md found under $CFG/skills — broken or partial install?"
+else
+  miss=0
+  for ref in $(grep -oE 'references/[a-z0-9-]+\.md' "$SKILL" 2>/dev/null | sort -u); do
+    [ -f "$(dirname "$SKILL")/$ref" ] || { warn "SKILL.md cites missing $ref"; miss=1; }
+  done
+  [ "$miss" = 0 ] && pass "every reference cited in SKILL.md exists" \
+                 || bad  "SKILL.md cites a missing reference (see WARN)"
+fi
 
 # 6. Every command (except /start) has an eval suite.
 emiss=0
