@@ -39,7 +39,10 @@ for entry in "${SNAPS[@]}"; do
   cp -a "$src"/. .
   git add -A
   git commit -q -m "Forge $tag (reconstructed from dist snapshot)"
-  git tag -f "$tag" >/dev/null
+  if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+    echo "  abort — tag $tag already exists (refusing to overwrite)"; exit 1
+  fi
+  git tag "$tag" >/dev/null
   echo "  committed + tagged $tag"
 done
 
