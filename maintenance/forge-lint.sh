@@ -44,7 +44,7 @@ else pass "learnings.md holds no machinery log"; fi
 # 4. Safety walls intact in settings.json.
 S="$CFG/settings.json"
 if grep -q '"Bash(git push:\*)"' "$S" && grep -q '"Bash(git merge:\*)"' "$S" \
-   && grep -qi 'deploy' "$S" && grep -q 'Edit(.claude/settings.json)' "$S"; then
+   && grep -q '"Bash(\*deploy\*)"' "$S" && grep -q 'Edit(.claude/settings.json)' "$S"; then
   pass "settings.json walls intact (push/merge/deploy denied; settings-edit gated)"
 else bad "settings.json is missing a wall (push/merge/deploy) or the settings-edit gate"; fi
 
