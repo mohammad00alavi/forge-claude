@@ -26,7 +26,7 @@ if grep -q '_unrun_' claude-config/evals/BASELINE.md 2>/dev/null; then
 else ok "eval baseline established"; fi
 
 # 4. Tag must not already exist.
-if git rev-parse "v$V" >/dev/null 2>&1; then no "tag v$V already exists"; else ok "tag v$V is free"; fi
+if git rev-parse -q --verify "refs/tags/v$V" >/dev/null; then no "tag v$V already exists"; else ok "tag v$V is free"; fi
 
 echo ""
 if [ "$fail" = 0 ]; then echo "release-gate: READY to tag v$V"; exit 0
