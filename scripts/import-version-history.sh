@@ -16,7 +16,7 @@ git rev-parse --git-dir >/dev/null 2>&1 || { echo "Not inside a git repo."; exit
 git diff --quiet && git diff --cached --quiet || {
   echo "Working tree not clean — commit or stash first (this won't touch main, but --orphan shares the index)."; exit 1; }
 
-ORIG="$(git branch --show-current 2>/dev/null || echo main)"
+ORIG="$(git symbolic-ref --quiet --short HEAD || git rev-parse --short HEAD)"
 
 # oldest -> newest:  tag|relative-path-under-SNAP_ROOT
 SNAPS=(
