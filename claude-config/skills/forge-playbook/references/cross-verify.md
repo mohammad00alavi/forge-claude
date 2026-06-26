@@ -35,11 +35,22 @@ Haiku verifier stays fully functional on any plan with no extra setup.
   `/codex:setup`
   Then the verifier's final gate calls `/codex:review` on the diff.
 - **Gemini / Antigravity**: the gemini-plugin-cc / antigravity-plugin port.
-  (Note: Gemini CLI free tier is being retired June 18 2026 in favor of
-  Antigravity `agy` — check current state before relying on it.)
+  (Note: the Gemini CLI free tier was retired on June 18 2026 in favor of
+  Antigravity `agy`; use the Antigravity path and verify current state before
+  relying on it.)
 
 After install, set in the venture STATE.md Snapshot:
 `Cross-verify: codex` (or `gemini` / `none`). The verifier reads this.
+
+## Graceful degradation (never hard-fail on a missing optional tool)
+
+Cross-verify is strictly optional plumbing. If STATE.md sets `Cross-verify:
+codex` (or `gemini`) but the plugin/CLI isn't actually installed, the verifier
+does NOT error or block the build — it falls back to the Haiku verifier + the
+maker/checker wall, notes "cross-verify requested but unavailable" in STATE.md,
+and surfaces it to the human. The same rule applies to the rescue path below: if
+the rescue command isn't installed, skip straight to human escalation. A missing
+optional integration must never stall a run.
 
 ## When the verifier uses it
 
@@ -63,6 +74,8 @@ the repo and propose a fix). The research showed a different foundation model
 "resolves deadlocked cycles single-model retries cannot break" — an error
 pattern that loops one model often lies outside another model's failure
 distribution. Only escalate to the human if the cross-model rescue also fails.
+If neither rescue command is installed, skip straight to human escalation — the
+rescue is a best-effort optimization, never a hard dependency.
 
 This is also opt-in (same `Cross-verify` setting gates it) and respects every
 wall: the rescue's output is still reviewed, still gated, still human-approved

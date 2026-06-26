@@ -18,7 +18,7 @@ Tell me, briefly:
 - **The one safety fact:** edits are free, but nothing gets committed, deployed,
   or spent without my explicit yes. I'm always the gate on irreversible things.
 
-Don't list all 11 agents or 6 commands — mention they exist and that the right
+Don't list all 13 agents or 12 commands — mention they exist and that the right
 ones engage automatically based on the project's tier.
 
 ## Step 2 — Check readiness (briefly)

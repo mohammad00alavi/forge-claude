@@ -6,15 +6,15 @@ if [ "$TARGET" = "$HERE" ]; then echo "Run against a workspace dir, not this fol
 mkdir -p "$TARGET/.claude"
 cp -rv "$HERE/claude-config/." "$TARGET/.claude/" 2>/dev/null || cp -rv "$HERE/.claude/." "$TARGET/.claude/"
 [ -d "$TARGET/ventures" ] || cp -rv "$HERE/ventures" "$TARGET/ventures" 2>/dev/null || true
-# Ensure the git-guardrail hook is executable (zip may not preserve the bit)
-if [ -f "$TARGET/.claude/hooks/block-dangerous-git.sh" ]; then
-  chmod +x "$TARGET/.claude/hooks/block-dangerous-git.sh"
-  echo "  (made git-guardrail hook executable)"
+# Ensure hook scripts are executable (zip may not preserve the bit)
+if [ -d "$TARGET/.claude/hooks" ] && compgen -G "$TARGET/.claude/hooks/*.sh" >/dev/null; then
+  chmod +x "$TARGET"/.claude/hooks/*.sh 2>/dev/null || true
+  echo "  (made hook scripts executable)"
 fi
 echo ""
-echo "Forge v3.8 installed into: $TARGET"
+echo "Forge v3.9 installed into: $TARGET"
 echo "  13 agents, 12 commands, forge-playbook skill, learning loop,"
-echo "  git-guardrail hook (hardens the push wall), gated settings."
+echo "  git-guardrail + routing-ledger hooks, gated settings."
 echo ""
 echo "Start:  cd $TARGET && claude  ->  /start  (or /assess \"your idea\")"
 echo "Note: the hook needs the path \$CLAUDE_PROJECT_DIR — Claude Code sets this"

@@ -36,6 +36,22 @@ the general set (practitioner / academic / skeptic / economist / historian).
    weakest link + what would verify it, bias check (which voice dominated),
    missing 6th perspective, overall grade + what to fix.
 
+## Bridge to a venture (close the research→build gap)
+
+If the research was about WHETHER or WHAT to build (a venture/market question),
+don't stop at findings — hand off, or it stalls:
+1. Distill a one-paragraph **venture brief**: value prop (one line), target user,
+   the single core feature, and the go/no-go + rough tier signal the research supports.
+2. Write it to `ventures/<slug>/research-brief.md` so `/assess` can ingest it
+   directly — no re-deriving, no cross-repo copy-paste.
+3. End with the explicit next step: `/assess "<distilled one-liner>"` if it's a
+   go, or "validate first: <the cheapest test that would de-risk it>" if the
+   research flagged a real risk.
+
+Research that ends in a brief + a named next command converts; research that ends
+in a wall of findings stalls. (For non-venture/technical research, skip this — a
+findings summary for the architect is the deliverable.)
+
 ## Rules
 
 - EVERY non-trivial claim cites a real source from web_search. Unsourced claims

@@ -19,7 +19,11 @@ expand scope beyond the spec.
    never re-attempt a recorded dead end), the architect's spec for this feature,
    and the handoff ledger section addressed to you.
 2. Work in a git worktree on branch `claude/<feature-slug>` so parallel
-   builders never collide.
+   builders never collide. Validated flow:
+   `git worktree add -b claude/<feature> ../<repo>-<feature> HEAD` → build/test
+   there → after the human merges, `git worktree remove ../<repo>-<feature>`.
+   Sequential single-feature work may use the main checkout; the moment a second
+   builder runs, worktrees are mandatory (Wall 4).
 3. For bugfix-type work, write the failing test first; then make it pass.
    TDD vertical slices: one test → one implementation → repeat. NEVER write all
    tests then all code — that "horizontal slicing" tests imagined behavior and

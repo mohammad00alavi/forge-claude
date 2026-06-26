@@ -13,7 +13,9 @@ Steps:
    structure, where the gates are (test/lint/build commands), the main risk
    areas. If gates are missing, note what's needed.
 2. **Establish state** — create/confirm the project's STATE.md with:
-   - the gate commands (so the fixer/verifier can run them)
+   - the gate commands (test/lint/build) so the fixer/verifier can run them; if
+     none are defined, record `Gates: MISSING` + what's needed — never invent
+     commands that don't exist
    - a "Dead ends (don't retry)" section (starts empty)
    - **a Denied paths list (OPTIONAL)** — the git-gate (local commit free, push
      human-only) is the real protection, so this is belt-and-suspenders for the

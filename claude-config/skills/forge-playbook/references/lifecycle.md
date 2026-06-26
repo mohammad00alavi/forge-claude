@@ -9,7 +9,8 @@ file first and writes to it last (the system forgets; the file does not).
    lifecycle plan.
 3. **STOP — present the tier + cost band for approval.** (User approves the
    tier before any spend; after that the orchestrator runs automatically.)
-4. On approval, create `ventures/<slug>/` with the state file and proceed.
+4. On approval, create `ventures/<slug>/` with the state file and proceed
+   (use the **lean STATE** at T0/T1, the full template at T2+ — references/state.md).
 
 ## Stage 1 — Brainstorm (`/brainstorm`, only if the idea is fuzzy)
 - strategist + (T2+) pm sharpen the idea into: one-line value prop, target

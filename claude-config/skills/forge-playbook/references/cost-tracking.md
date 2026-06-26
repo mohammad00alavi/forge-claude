@@ -49,6 +49,23 @@ Per venture, the manager keeps a rough ET tally in STATE.md `Cost log`:
   was an outlier, write a learning ("X-type features need tighter specs" or
   "route Y to Sonnet not Opus").
 
+## Automatic routing ledger (measured, not estimated)
+
+A PreToolUse hook on the Task tool (`.claude/hooks/log-agent-spawn.sh`) appends
+one line per agent spawn to `ventures/<slug>/routing-ledger.tsv`:
+`<timestamp>  <agent>  <model-tier>`. This makes the routing mix *measured by
+invocation*, not just an ET estimate. Read it any time:
+
+```
+cut -f3 ventures/<slug>/routing-ledger.tsv | sort | uniq -c
+```
+
+That prints the Haiku/Sonnet/Opus spawn split directly — the 70/20/10 target you
+can actually check. It counts invocations, not tokens, so pair it with the ET
+tally above for the fuller picture. The model is read from each agent's own
+frontmatter (`.claude/agents/<agent>.md`), so there is a single source of truth —
+no map to keep in sync.
+
 ## What this is NOT
 
 Not real-time metering, not a gateway, not exact accounting. Claude Code can

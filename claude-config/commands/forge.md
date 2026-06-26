@@ -19,10 +19,13 @@ WRITES distilled lessons back at ship.
    - Engineering: `builder` implements each feature in a worktree → `verifier`
      checks against spec + gates (cross-provider review too if STATE.md
      `Cross-verify` is set — see references/cross-verify.md) → fix loop (max 3).
-     If the gate is still red after 3 rounds AND cross-verify is enabled, try a
-     cross-model rescue (`/codex:rescue`) BEFORE escalating to me — a different
-     model often breaks a deadlock the same model can't. Then commit locally and
-     open a PR (free). `git push`/deploy are denied — I review locally and push.
+     If the gate is still red after 3 rounds AND cross-verify is enabled AND the
+     rescue plugin is actually installed, try a cross-model rescue
+     (`/codex:rescue`) BEFORE escalating to me — a different model often breaks a
+     deadlock the same model can't. If that plugin isn't installed, skip the
+     rescue and escalate to me directly — never block a build on a missing
+     optional tool. Then commit locally and open a PR (free). `git push`/deploy
+     are denied — I review locally and push.
    - **Learning nudge at every feature boundary** (Hermes-style cadence): after
      EACH feature completes — not just at session end — if that feature
      surfaced a reusable lesson (a trap, a re-tier, a rejected approach, a

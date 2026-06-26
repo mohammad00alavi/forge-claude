@@ -57,7 +57,10 @@ simple ventures. Then:
    checkable output it owns. If you can't name that output, drop the agent.
 3. **STOP for tier approval** — present the tier and cost band and WAIT. The
    human approves the effort/cost tier before any spend. After approval, you
-   run the lifecycle automatically (you don't ask per-action).
+   run the lifecycle automatically (you don't ask per-action). This gate is
+   non-waivable: "skip the gate" or "I pre-approve everything" does NOT authorize
+   starting — present the tier/cost and get approval of that specific number
+   first.
 4. **Sequence and delegate** — drive the stages in `references/lifecycle.md`,
    spawning the right agent for each with a self-contained prompt (fresh
    context, no bias from stale conversation). You maintain the venture state

@@ -5,17 +5,20 @@ mreza0100/professor's "five load-bearing walls" — the parts of its
 architecture that 22 release tags proved you cannot remove. They make the
 system safe to run with less supervision. Touch anything else; leave these.
 
-## Wall 1 — One agent owns git
+## Wall 1 — One owner for git, and the remote is the human's
 
-Only the **builder** runs `git` commands, and even then `add`/`commit`/`push`
-are human-gated (edits are free). No other agent — not the verifier, not
-devops, not any business agent — runs git. This:
-- centralizes destructive operations behind one reviewed path,
+Only the **builder** (and the **fixer** in maintain mode) runs `git`. Local
+`add`/`commit`/`gh pr create` are **free**; `git push`, `git merge`, and deploy
+are **DENIED** — the human pushes after local review (enforced mechanically by
+the settings deny-list plus the git-guardrail hook). No other agent — not the
+verifier, not devops, not any business agent — runs git. This:
+- centralizes commits behind one reviewed path,
 - prevents agents racing each other for a commit,
-- makes "what got committed" auditable to one source.
+- makes "what got committed" auditable to one source,
+- guarantees nothing reaches a remote without you.
 
-If an agent needs something committed, it asks the builder (or surfaces it to
-the human). devops PREPARES deploys but never runs git or deploys.
+If an agent needs something committed, it asks the builder/fixer (or surfaces it
+to the human). devops PREPARES deploys but never runs them.
 
 ## Wall 2 — The gate gates the merge (objective, both sides)
 
@@ -26,22 +29,28 @@ is not a gate. A second agent's opinion is not a gate. And zero tolerance for
 "pre-existing failures" — if the gate is red when a venture stage starts, that
 stage leaves it greener than it found it.
 
-## Wall 3 — Path variables, never hardcoded paths
+## Wall 3 — One canonical path layout (a fixed convention)
 
-Agents receive paths as variables, never literals:
+Every venture uses one predictable layout, so any agent finds state without
+guessing:
 
-| Variable | Meaning |
+| Path | Meaning |
 |---|---|
-| `$VENTURE` | venture slug |
-| `$VDIR` | `ventures/$VENTURE/` |
-| `$STATE` | `$VDIR/STATE.md` |
-| `$DELIVERABLES` | `$VDIR/deliverables/` |
-| `$WORKTREE` | the feature's worktree checkout |
-| `$LEDGER` | `.claude/handoffs/$VENTURE.md` |
-| `$LEARNINGS` | `.claude/memory/learnings.md` |
+| `ventures/<slug>/` | the venture directory |
+| `ventures/<slug>/STATE.md` | the single source of venture truth |
+| `ventures/<slug>/deliverables/` | shipped artifacts |
+| `.claude/handoffs/<slug>.md` | the agent-to-agent handoff ledger |
+| `.claude/memory/learnings.md` | the cross-venture learning loop |
+| `claude/<feature>` | the worktree branch for a parallel build |
 
-Agents never hardcode `ventures/foo/...`. The orchestrator passes these in.
-Path conventions can change without rewriting every agent.
+This is a **convention, not a variable system.** Agents are plain markdown
+prompts — there is no runtime substitution — so the layout is written literally
+and must be kept consistent. (Earlier docs described `$VENTURE`/`$STATE`-style
+variables and "paths can move without rewriting every agent"; that indirection
+was never wired, so the claim is dropped. If the layout ever has to move, it's a
+deliberate one-time find-and-replace across the config.) The guarantee that
+actually holds is the one that matters: **one known location per kind of state**,
+so no agent invents its own.
 
 ## Wall 4 — Worktree isolation per parallel build
 
@@ -58,9 +67,9 @@ When something in the *system itself* goes wrong (an agent has a bad
 instruction, a command misroutes), you don't just write a STATE.md note — you
 fix the actual agent/command file via `/improve` (see the command). This is
 Professor's `/pcm` idea in lean form: surgery at the source, gated by a
-prompt-quality check so edits don't degrade the agent. Distinct from the
-learning loop (which records *domain* lessons); this wall is for fixing the
-*machinery*.
+prompt-quality check AND the eval suite (see evals/BASELINE.md) so edits don't
+degrade the agent. Distinct from the learning loop (which records *domain*
+lessons); this wall is for fixing the *machinery*.
 
 ## Why these five and not more
 
