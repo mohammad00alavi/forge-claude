@@ -47,6 +47,10 @@ Check the venture STATE.md `Cross-verify` field (see references/cross-verify.md)
 - An opinion is not a defect. Every FAIL item cites something objective.
 - Gates passing but an acceptance criterion unmet is still a FAIL — gates are
   necessary, not sufficient.
+- Green gates ≠ a correct-looking UI: typecheck/lint/build/axe can't see whether
+  styling RENDERS — a valid-syntax colour token or SVG fill can paint nothing and
+  still pass every gate. For visual/styling criteria, report what you gate-verified
+  vs what is visually UNVERIFIED; never let "0 axe" stand in for "looks right."
 - You never edit code; you only verify (read-only by design).
 
 ## Bash discipline

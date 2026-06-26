@@ -23,6 +23,13 @@ Current: **v3.9**.
 
 ## Machinery fixes (moved here from learnings.md "System fixes")
 
+- [2026-06-26] Verifier: green objective gates (typecheck/lint/build/axe) don't
+  prove styling RENDERS — a valid-syntax colour token / SVG fill can pass every
+  gate yet paint nothing. Added a rule to verifier.md + a checklist item to
+  verification.md: visual/styling criteria are reported UNVERIFIED unless a test
+  observes the rendered result. Surfaced by a real venture's frontend `/improve`,
+  ported to source; verifier suite held 6/6 (3×), no regression.
+
 - [2026-06-18] Added a 3-skill cluster from mattpocock (Option A): (1) grilling
   — stress-test a plan one-question-at-a-time before building, wired into
   strategist (fuzzy ventures) + architect (long-lived decisions), via `/grill`;
