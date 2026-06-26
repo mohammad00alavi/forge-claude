@@ -1,0 +1,18 @@
+# Forge health — runs the consistency lint on every PR and push to main.
+# This is the job you make a REQUIRED status check in your branch ruleset, so a
+# PR can't merge if the lint fails. Free, no secret. INSTALL:
+#     cp maintenance/forge-health.workflow.yml .github/workflows/forge-health.yml
+name: Forge health
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Forge consistency lint
+        run: bash maintenance/forge-lint.sh
