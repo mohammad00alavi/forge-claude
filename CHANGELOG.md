@@ -23,6 +23,18 @@ Current: **v3.9**.
 
 ## Machinery fixes (moved here from learnings.md "System fixes")
 
+- [2026-06-30] Verifier visual rigor, round 2 + eval isolation (from
+  `/improve`): (a) axe only checks the DEFAULT/static render — for controls with
+  selected/hover/active/focus styling the verifier now reasons about each state's
+  contrast by hand (a selected control can fail WCAG AA yet pass axe-0);
+  verifier.md + verification.md extended. (b) NEW eval case E3 locks in that
+  failure mode (axe-green but sub-AA selected state) — BASELINE verifier 6→7,
+  70 cases total; E3 is fragile-by-design (median 2/3, ui-ux backstops). (c)
+  eval-harness.md gains an ISOLATION rule after a real leak (a verifier-eval run
+  created synthetic `slug.ts` fixtures that got committed): run evals in a
+  throwaway worktree or treat the input as hypothetical, and assert a clean tree
+  after. Ported to source; verifier re-verified 7/7 at median, no regression.
+
 - [2026-06-26] Verifier: green objective gates (typecheck/lint/build/axe) don't
   prove styling RENDERS — a valid-syntax colour token / SVG fill can pass every
   gate yet paint nothing. Added a rule to verifier.md + a checklist item to

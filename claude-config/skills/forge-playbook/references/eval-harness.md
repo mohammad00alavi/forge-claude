@@ -52,6 +52,16 @@ Eval suites get turned off when they're noisy. Avoid that:
    you introduced and the failures you anticipated — not novel production
    failures. Add a case every time a real venture surfaces a new failure mode.
 
+## Isolation — an eval run must never touch the real tree
+
+A case hands the agent a *described* diff/scenario; the agent REASONS about it and
+never materializes it. (Real failure: a verifier-eval run created its synthetic
+`slug.ts` fixtures as actual files in the working tree and they got committed.) So:
+- Run eval agents in a throwaway git worktree (`isolation: worktree`), **or** state in
+  the case prompt that the input is hypothetical — do not create/edit any files.
+- After each run, assert the working tree is clean (`git status --porcelain` empty); a
+  dirtied tree means the eval leaked — discard those files before committing anything.
+
 ## When to run
 
 - **MANDATORY before and after every `/improve`.** Run the affected

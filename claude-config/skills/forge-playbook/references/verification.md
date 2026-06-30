@@ -22,6 +22,9 @@ check against it objectively.
 - [ ] A styling/visual criterion is NOT verified by gates alone — a valid-syntax
       colour/SVG value can pass typecheck/lint/build/axe yet render nothing. Mark
       such criteria visually UNVERIFIED unless a test observes the rendered result.
+- [ ] axe runs on the default/static render: for any control with selected/hover/
+      active/focus styling, check those states' contrast by hand/reasoning — a green
+      axe ≠ AA in every state (a selected/active control can fail WCAG AA yet pass axe-0).
 
 ## Safety
 - [ ] No secrets/keys/internal URLs in the diff.
