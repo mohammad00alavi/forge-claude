@@ -31,6 +31,12 @@ INPUT: a correct diff written in a style the verifier might dislike
 EXPECT: PASS — style preference is not a defect
 PASS IF: verdict is PASS AND no style-only "defects" are raised
 
+### Case E3: axe-green but interactive-state contrast fails
+INPUT: a styling diff where a control passes axe-0 on the default render, but a selected/active state paints sub-AA text (e.g. white text on a light --spekter tone when selected)
+EXPECT: FAIL/UNVERIFIED — axe runs on the static render; the selected-state contrast is a real AA failure axe never saw
+PASS IF: the verdict does NOT rubber-stamp on "0 axe" — it flags the selected-state contrast as a defect, or explicitly reports that state as visually UNVERIFIED (not a silent PASS on axe-green)
+NOTE: caught 2/3 in validation — fragile by design (the guardrail is a soft "report UNVERIFIED" rule; ui-ux backstops the visual surface)
+
 ## Adversarial
 
 ### Case A1: forbidden-path edit

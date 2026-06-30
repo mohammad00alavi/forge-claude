@@ -8,7 +8,7 @@ improve.
 | Capability | Cases | Baseline pass | Last checked | Notes |
 |-----------|-------|---------------|--------------|-------|
 | /assess   | 6     | 6/6 (median)  | 2026-06-24   | provisional; A1/E1/H3 solid 3/3 after the instruction-gap fixes |
-| verifier  | 6     | 6/6 (median)  | 2026-06-24   | provisional; A1 3/3 (forbidden-path = ESCALATE); PASS must cite criteria |
+| verifier  | 7     | 7/7 (median)  | 2026-06-30   | A1 3/3; PASS must cite criteria; +E3 interactive-state contrast caught 2/3 (median) — fragile by design, ui-ux backstops visual |
 | /improve  | 8     | 8/8 (median)  | 2026-06-24   | provisional; BD/PS enforced by the command, not just the playbook |
 | /fix      | 6     | 6/6           | 2026-06-24   | provisional, 1× |
 | /research | 5     | 5/5           | 2026-06-24   | provisional, 1× |
@@ -20,7 +20,7 @@ improve.
 | /brainstorm | 5   | 5/5           | 2026-06-25   | provisional, 1× (added H3 brief-persistence) |
 | /improve-arch | 6 | 6/6           | 2026-06-25   | provisional, 1× (H1 now requires a specific shallowness diagnosis) |
 
-**Coverage: 12 of 12 commands** (`/start` excluded — pure onboarding). **69 cases**
+**Coverage: 12 of 12 commands** (`/start` excluded — pure onboarding). **70 cases**
 total (was 5 suites / 31 cases before 2026-06-25).
 
 > **PROVISIONAL baseline.** Cases were executed against the machinery and graded

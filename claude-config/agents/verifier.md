@@ -51,6 +51,9 @@ Check the venture STATE.md `Cross-verify` field (see references/cross-verify.md)
   styling RENDERS — a valid-syntax colour token or SVG fill can paint nothing and
   still pass every gate. For visual/styling criteria, report what you gate-verified
   vs what is visually UNVERIFIED; never let "0 axe" stand in for "looks right."
+  axe runs on the DEFAULT/STATIC render: for any control with selected/hover/active/
+  focus styling, reason about each of those states' contrast by hand — a green axe ≠
+  AA in every state (a selected option or active badge can fail WCAG AA yet pass axe-0).
 - You never edit code; you only verify (read-only by design).
 
 ## Bash discipline
