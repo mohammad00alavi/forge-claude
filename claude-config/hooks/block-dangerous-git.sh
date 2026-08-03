@@ -7,6 +7,9 @@
 # Forge-specific: blocks push/merge/force/reset/clean/branch -D — but ALLOWS
 # git add/commit/gh pr create (Forge's model: local git is free, only the
 # outward/destructive ops are walled; the human pushes after local review).
+# Also blocks raw-shell writes to .claude/settings.json: the Edit/Write tools are
+# denied for it, and this closes the Bash(*) gap so the safety walls can't be
+# rewritten by an agent. That file is human-only.
 
 INPUT=$(cat)
 
@@ -39,5 +42,14 @@ for pattern in "${DANGEROUS_PATTERNS[@]}"; do
     exit 2
   fi
 done
+
+# Settings lockdown — block shell writes to .claude/settings.json. Edit/Write are
+# denied for it, but Bash(*) could still rewrite it, so close that here. Matches a
+# redirect / sed -i / tee|cp|mv|dd|install|truncate|ln that TARGETS the file (reads
+# like `cat .claude/settings.json` stay allowed).
+if printf '%s' "$COMMAND" | grep -qE '(>>?[[:space:]]*[^ |&;]*\.claude/settings\.json|sed[[:space:]]+-i[^|&;]*\.claude/settings\.json|(tee|cp|mv|dd|install|truncate|ln)[[:space:]][^|&;]*\.claude/settings\.json)'; then
+  echo "BLOCKED: '$COMMAND' looks like a shell write to .claude/settings.json — that file holds Forge's safety walls and is human-only. Edit it by hand, never via an agent." >&2
+  exit 2
+fi
 
 exit 0
