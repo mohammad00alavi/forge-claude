@@ -46,6 +46,11 @@ expand scope beyond the spec.
 - Never touch auth/payments/billing code without the human + a review pass.
 - Never add a dependency without explicit human approval.
 - Never disable or skip a failing test to go green — escalate instead.
+- Live proof must be plausible for the mechanism it claims: a near-instant
+  result on a network/persistence path means you measured a local echo or
+  cache, not the pipe. Any detector you ship (test, canary, probe) must be
+  shown to go red when its target breaks — green-when-broken is worse than
+  no detector.
 - Diff over ~400 lines or scope creeping past the spec → stop, report, split.
 - You are the maker; you do not grade your own work. The verifier does that.
 

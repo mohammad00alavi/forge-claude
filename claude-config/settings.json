@@ -1,6 +1,7 @@
 {
+  "forceLoginMethod": "claudeai",
   "permissions": {
-    "_comment": "MODEL (v3.5): Bash(*) allows all bash so runs flow without operator/env prompts. SAFETY = the deny list (deny overrides allow): git push/merge/force DENIED (mechanical wall \u2014 human pushes after local review); home-dir reads (~/.nvm,.ssh,.aws,.config,etc) DENIED (no probing your machine); destroyers (rm -rf, publish, deploy) DENIED; in-project secrets (.env, auth, payments) DENIED. ALWAYS GATED: Edit(.claude/settings.json) stays in 'ask' so an agent can't silently rewrite these rules and remove the walls. This is Professor's allow-all-bash smoothness BUT keeping the mechanical git gate instead of Professor's prose gate \u2014 stronger, costs nothing.",
+    "_comment": "MODEL (v3.5): Bash(*) allows all bash so runs flow without operator/env prompts. SAFETY = the deny list (deny overrides allow): git push/merge/force DENIED (mechanical wall \u2014 human pushes after local review); home-dir reads (~/.nvm,.ssh,.aws,.config,etc) DENIED (no probing your machine); destroyers (rm -rf, publish, deploy) DENIED; in-project secrets (.env, auth, payments) DENIED. HARD-LOCKED: Edit and Write of .claude/settings.json are DENIED so no agent can rewrite these rules or remove the walls; a human edits this file by hand. Note Bash(*) stays allowed, so a raw shell write to this path is NOT covered by these tool-permission rules — the block-dangerous-git.sh PreToolUse hook closes that gap for full lockdown. This is Professor's allow-all-bash smoothness BUT keeping the mechanical git gate instead of Professor's prose gate \u2014 stronger, costs nothing.",
     "allow": [
       "Edit",
       "Write",
@@ -50,11 +51,11 @@
       "Read(/Users/**/.gnupg/**)",
       "Bash(ls /Users/**/.nvm:*)",
       "Bash(cat /Users/**/.ssh:*)",
-      "Bash(cat /Users/**/.aws:*)"
+      "Bash(cat /Users/**/.aws:*)",
+      "Edit(.claude/settings.json)",
+      "Write(.claude/settings.json)"
     ],
-    "ask": [
-      "Edit(.claude/settings.json)"
-    ]
+    "ask": []
   },
   "hooks": {
     "Stop": [

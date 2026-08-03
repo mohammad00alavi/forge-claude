@@ -23,6 +23,26 @@ Current: **v3.9**.
 
 ## Machinery fixes (moved here from learnings.md "System fixes")
 
+- [2026-08-01] Builder live-proof plausibility + verifier E4 (from a venture
+  `/improve`, ported to source): the builder live-"proved" an SSE messaging
+  canary with 6–10ms round-trips — that was the chat UI's optimistic local echo,
+  not the pipe; the shipped detector would have stayed green with SSE broken
+  (venture PR #56; Copilot caught it in review, no verifier ran). Fix: builder.md
+  hard rule (live proof must be plausible for the mechanism; any shipped
+  detector must be shown to go red when its target breaks) + verifier.md step-2
+  pin (implausible evidence is a FAIL, not a proof) + new eval case verifier/E4.
+  Full 3×-median re-run after the edit: verifier 7/7→8/8 (71 cases), /forge
+  6/6 — no regression. E4 passed 3/3 pre-edit too (the machinery held when
+  actually run; the sentence + case pin it).
+
+- [2026-06-30] Settings hardening (two walls): (1) `forceLoginMethod: "claudeai"`
+  — Forge authenticates via the Claude.ai subscription, so runs don't bill API
+  credits. (2) Settings lockdown — `Edit` and `Write` of `.claude/settings.json`
+  moved from `ask` to DENY, and the git-guard PreToolUse hook now also blocks
+  raw-shell writes to it (`>` / `sed -i` / `tee` / `cp` / `mv` / `dd` / …),
+  closing the `Bash(*)` gap so no agent can rewrite the walls; a human edits
+  settings by hand. Tested: shell writes blocked, reads allowed, git walls intact.
+
 - [2026-06-30] Verifier visual rigor, round 2 + eval isolation (from
   `/improve`): (a) axe only checks the DEFAULT/static render — for controls with
   selected/hover/active/focus styling the verifier now reasons about each state's
