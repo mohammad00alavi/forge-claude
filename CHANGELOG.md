@@ -35,6 +35,14 @@ Current: **v3.9**.
   6/6 — no regression. E4 passed 3/3 pre-edit too (the machinery held when
   actually run; the sentence + case pin it).
 
+- [2026-06-30] Settings hardening (two walls): (1) `forceLoginMethod: "claudeai"`
+  — Forge authenticates via the Claude.ai subscription, so runs don't bill API
+  credits. (2) Settings lockdown — `Edit` and `Write` of `.claude/settings.json`
+  moved from `ask` to DENY, and the git-guard PreToolUse hook now also blocks
+  raw-shell writes to it (`>` / `sed -i` / `tee` / `cp` / `mv` / `dd` / …),
+  closing the `Bash(*)` gap so no agent can rewrite the walls; a human edits
+  settings by hand. Tested: shell writes blocked, reads allowed, git walls intact.
+
 - [2026-06-30] Verifier visual rigor, round 2 + eval isolation (from
   `/improve`): (a) axe only checks the DEFAULT/static render — for controls with
   selected/hover/active/focus styling the verifier now reasons about each state's
