@@ -8,7 +8,7 @@ improve.
 | Capability | Cases | Baseline pass | Last checked | Notes |
 |-----------|-------|---------------|--------------|-------|
 | /assess   | 6     | 6/6 (median)  | 2026-06-24   | provisional; A1/E1/H3 solid 3/3 after the instruction-gap fixes |
-| verifier  | 7     | 7/7 (median)  | 2026-06-30   | A1 3/3; PASS must cite criteria; +E3 interactive-state contrast caught 2/3 (median) — fragile by design, ui-ux backstops visual |
+| verifier  | 8     | 8/8 (median)  | 2026-08-01   | A1 3/3; PASS must cite criteria; E3 interactive-state contrast fragile by design (ui-ux backstops visual); +E4 implausible live-proof (Aramo canary PR #56) 3/3 pre- and post-edit |
 | /improve  | 8     | 8/8 (median)  | 2026-06-24   | provisional; BD/PS enforced by the command, not just the playbook |
 | /fix      | 6     | 6/6           | 2026-06-24   | provisional, 1× |
 | /research | 5     | 5/5           | 2026-06-24   | provisional, 1× |
@@ -20,8 +20,8 @@ improve.
 | /brainstorm | 5   | 5/5           | 2026-06-25   | provisional, 1× (added H3 brief-persistence) |
 | /improve-arch | 6 | 6/6           | 2026-06-25   | provisional, 1× (H1 now requires a specific shallowness diagnosis) |
 
-**Coverage: 12 of 12 commands** (`/start` excluded — pure onboarding). **70 cases**
-total (was 5 suites / 31 cases before 2026-06-25).
+**Coverage: 12 of 12 commands** (`/start` excluded — pure onboarding). **71 cases**
+total (was 5 suites / 31 cases before 2026-06-25; +verifier E4 on 2026-08-01).
 
 > **PROVISIONAL baseline.** Cases were executed against the machinery and graded
 > strictly vs each PASS-IF — /assess, verifier and /improve at 3× (median of 3),
@@ -60,6 +60,20 @@ caught and fixed a real machinery gap.
 Remaining trivial residual: the /gtm command gives T2 a "basic launch plan"
 while the suite reserves "launch sequence" for T3+ — a latent wording ambiguity
 (E2 still passes); tighten the command wording if it ever bites.
+
+## 2026-08-01 /improve — implausible live-proof evidence (Aramo canary incident)
+
+Real-venture failure: the builder live-"proved" an SSE messaging canary with
+6–10ms round-trips — that was the chat UI's optimistic local echo, not the
+pipe; the shipped detector would have stayed green with SSE broken (PR #56;
+Copilot caught it in review, no verifier ran). Fix: builder.md hard rule (live
+proof must be plausible for the mechanism; a detector must be shown to go red
+when its target breaks) + a verifier.md step-2 pin + verifier case E4. Full
+3×-median re-run AFTER the edit: verifier 8/8, /forge 6/6 — no regression. E4
+passed 3/3 pre-edit too (the machinery already held when actually run; the
+sentence + case pin it). Harness note: V-H3's scenario was corrected during
+this pass — its out-of-scope file must NOT be under a forbidden path
+(auth/payments/billing), which correctly outranks FAIL with ESCALATE.
 
 Add a new case whenever a real venture surfaces a machinery failure mode, then
 re-baseline.
