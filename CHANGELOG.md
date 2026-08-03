@@ -23,11 +23,11 @@ Current: **v3.9**.
 
 ## Machinery fixes (moved here from learnings.md "System fixes")
 
-- [2026-08-01] Builder live-proof plausibility + verifier E4 (from Aramo
+- [2026-08-01] Builder live-proof plausibility + verifier E4 (from a venture
   `/improve`, ported to source): the builder live-"proved" an SSE messaging
   canary with 6–10ms round-trips — that was the chat UI's optimistic local echo,
   not the pipe; the shipped detector would have stayed green with SSE broken
-  (Aramo PR #56; Copilot caught it in review, no verifier ran). Fix: builder.md
+  (venture PR #56; Copilot caught it in review, no verifier ran). Fix: builder.md
   hard rule (live proof must be plausible for the mechanism; any shipped
   detector must be shown to go red when its target breaks) + verifier.md step-2
   pin (implausible evidence is a FAIL, not a proof) + new eval case verifier/E4.

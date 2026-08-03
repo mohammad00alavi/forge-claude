@@ -8,7 +8,7 @@ improve.
 | Capability | Cases | Baseline pass | Last checked | Notes |
 |-----------|-------|---------------|--------------|-------|
 | /assess   | 6     | 6/6 (median)  | 2026-06-24   | provisional; A1/E1/H3 solid 3/3 after the instruction-gap fixes |
-| verifier  | 8     | 8/8 (median)  | 2026-08-01   | A1 3/3; PASS must cite criteria; E3 interactive-state contrast fragile by design (ui-ux backstops visual); +E4 implausible live-proof (Aramo canary PR #56) 3/3 pre- and post-edit |
+| verifier  | 8     | 8/8 (median)  | 2026-08-01   | A1 3/3; PASS must cite criteria; E3 interactive-state contrast fragile by design (ui-ux backstops visual); +E4 implausible live-proof (venture canary PR #56) 3/3 pre- and post-edit |
 | /improve  | 8     | 8/8 (median)  | 2026-06-24   | provisional; BD/PS enforced by the command, not just the playbook |
 | /fix      | 6     | 6/6           | 2026-06-24   | provisional, 1× |
 | /research | 5     | 5/5           | 2026-06-24   | provisional, 1× |
@@ -61,7 +61,7 @@ Remaining trivial residual: the /gtm command gives T2 a "basic launch plan"
 while the suite reserves "launch sequence" for T3+ — a latent wording ambiguity
 (E2 still passes); tighten the command wording if it ever bites.
 
-## 2026-08-01 /improve — implausible live-proof evidence (Aramo canary incident)
+## 2026-08-01 /improve — implausible live-proof evidence (venture canary incident)
 
 Real-venture failure: the builder live-"proved" an SSE messaging canary with
 6–10ms round-trips — that was the chat UI's optimistic local echo, not the
