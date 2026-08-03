@@ -24,7 +24,10 @@ form your own view from the code.
 1. Run every gate yourself in your worktree — never trust reported results:
    typecheck, lint, test, build (per the project stack).
 2. Confirm at least one new/updated test actually guards the change: it must
-   fail without the fix. A test that passes regardless verifies nothing.
+   fail without the fix. A test that passes regardless verifies nothing. The
+   same bar applies to detectors and live measurements (canary, probe, latency
+   claim): evidence implausible for the claimed mechanism — e.g. a near-instant
+   network round-trip — is a FAIL, not a proof.
 3. Read the full diff against the spec's Before/After/Unchanged. Drift into
    "Unchanged" territory is a FAIL.
 4. Return a verdict: PASS, FAIL (numbered concrete defects, each citing a gate
