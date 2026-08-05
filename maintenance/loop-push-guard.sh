@@ -20,6 +20,13 @@ fi
 
 [ -z "$COMMAND" ] && exit 0
 
+# Global git flags before 'push' (-c/-C/--git-dir/…) can dodge the plain
+# 'git push' detection below and retarget the repo or config — never sanctioned.
+if printf '%s' "$COMMAND" | grep -qE 'git([[:space:]]+-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*){0,2})+[[:space:]]+push([[:space:]]|$)'; then
+  echo "BLOCKED: git global flags before 'push' are not allowed. Loop pushes are exactly 'git push [-u] origin agent/<branch>' — nothing else. The human pushes everything else." >&2
+  exit 2
+fi
+
 # Only push commands concern this guard.
 printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+push' || exit 0
 

@@ -44,6 +44,15 @@ fi
 
 REPO="mohammad00alavi/forge-claude"
 
+# The merge must target THIS repo: the toggle read below is forge-claude's, so a
+# -R/--repo pointing anywhere else is never sanctioned (checked before the
+# toggle so cross-repo attempts are blocked deterministically, even offline).
+TARGET=$(printf '%s' "$COMMAND" | sed -nE 's/.*(--repo|-R)[[:space:]=]*([^[:space:]]+).*/\2/p' | head -1)
+if [ -n "$TARGET" ] && [ "$TARGET" != "$REPO" ]; then
+  echo "BLOCKED: this merge targets '$TARGET' but the toggle being honored is $REPO's. Cross-repo merges are never sanctioned — drop the flag or leave that PR for its own human." >&2
+  exit 2
+fi
+
 # Gate root: the contract runs the fresh gate in the PR's OWN worktree. Use the
 # session's cwd when it is a Forge checkout (worktree merges gate the worktree);
 # fall back to the project root otherwise.

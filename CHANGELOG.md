@@ -334,3 +334,10 @@ issue. Agents may DRAFT issues (labelled `needs-triage`); only the human's
   worktree (not the repo root) when merging from one; the push-scope regex
   forbids `:` so an `agent/<src>:<dst>` refspec can't retarget a protected
   ref. Guard behavior tests 25 → 42 cases, all green.
+- **Review hardening, round 2 (PR #7, Copilot):** (a) all three push guards now
+  block `git <global-flags> push` forms (`-c`/`-C`/`--git-dir`/…) that dodged
+  the plain `git push` detection and could retarget the repo or config; the
+  sanctioned shape is plain-only. (b) Both merge guards pin the merge to the
+  repo whose toggle they honor — a `-R`/`--repo` naming any other repo is
+  blocked (consumer edition resolves its repo from the remote and fails closed
+  when it can't). Guard behavior tests 42 → 64 cases, all green.

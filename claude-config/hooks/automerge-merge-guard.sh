@@ -41,8 +41,22 @@ if ! printf '%s' "$COMMAND" | grep -q -- '--squash' || ! printf '%s' "$COMMAND" 
   exit 2
 fi
 
+# Resolve THIS project's repo and pin the merge to it: the toggle being honored
+# is this repo's, so a -R/--repo pointing anywhere else is never sanctioned.
+# Unresolvable repo == fail closed.
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
+if [ -z "$REPO" ]; then
+  echo "BLOCKED: cannot resolve this project's GitHub repo, so the LOOP_AUTOMERGE toggle cannot be verified. Fail closed: leave the PR ready for the human." >&2
+  exit 2
+fi
+TARGET=$(printf '%s' "$COMMAND" | sed -nE 's/.*(--repo|-R)[[:space:]=]*([^[:space:]]+).*/\2/p' | head -1)
+if [ -n "$TARGET" ] && [ "$TARGET" != "$REPO" ]; then
+  echo "BLOCKED: this merge targets '$TARGET' but this project is '$REPO' — its toggle does not authorize merges elsewhere. Drop the flag or leave that PR for its own human." >&2
+  exit 2
+fi
+
 # The human-set toggle, read from THIS project's repo (hook cwd == project root).
-STATE=$(gh variable get LOOP_AUTOMERGE 2>/dev/null)
+STATE=$(gh variable get LOOP_AUTOMERGE -R "$REPO" 2>/dev/null)
 if [ "$STATE" != "true" ]; then
   echo "BLOCKED: agents do not merge in this project (LOOP_AUTOMERGE read: '${STATE:-unreadable}'). Open the PR ready and request review — the human merges. The human can opt in with /automerge on." >&2
   exit 2

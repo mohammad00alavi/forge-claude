@@ -49,6 +49,13 @@ done
 # to origin (publishing a loop PR branch); every push segment in the command must
 # match that exact shape or the whole command is blocked. loop-push-guard.sh then
 # validates the sanctioned segment strictly (flags, single ref, no refspecs).
+#
+# Global git flags before 'push' (-c/-C/--git-dir/…) can dodge the plain
+# 'git push' detection and retarget the repo or config — never sanctioned.
+if printf '%s' "$COMMAND" | grep -qE 'git([[:space:]]+-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*){0,2})+[[:space:]]+push([[:space:]]|$)'; then
+  echo "BLOCKED: '$COMMAND' uses git global flags before 'push'. The only sanctioned push is plain 'git push [-u] origin agent/<branch>' — no -c/-C/--git-dir/other global flags." >&2
+  exit 2
+fi
 if printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+push'; then
   while IFS= read -r seg; do
     if ! printf '%s' "$seg" | grep -qE '^git[[:space:]]+push[[:space:]]+((-u|--set-upstream)[[:space:]]+)?origin[[:space:]]+agent/[^:[:space:]]+[[:space:]]*$'; then
