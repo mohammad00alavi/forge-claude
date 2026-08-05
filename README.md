@@ -222,6 +222,8 @@ when the tier calls for them.
 | `/grill <plan>` | Stress-tests a plan one question at a time before you commit to building it |
 | `/research <topic>` | Deep multi-perspective research, grounded in real web search |
 | `/improve <issue>` | Fixes Forge's *own* agent/command files when the machinery misbehaves |
+| `/automerge on\|off` | Human-only toggle: lets agents squash-merge their own green, review-clean, up-to-date PRs; off by default |
+| `/forge-loop` | One iteration of the autonomous dev loop: your `forge-loop-ready` issues → worktree maker → project gate → fresh verifier → ready PR (`Closes #N`) → toggle-aware merge → next |
 
 ## The disciplines (the `forge-playbook` skill)
 

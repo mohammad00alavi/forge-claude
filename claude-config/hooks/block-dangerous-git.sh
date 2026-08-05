@@ -4,9 +4,12 @@
 # command, including chained forms like `cd foo && git push` that a settings.json
 # deny-glob can miss. This is what makes the push wall airtight under Bash(*).
 #
-# Forge-specific: blocks push/merge/force/reset/clean/branch -D — but ALLOWS
-# git add/commit/gh pr create (Forge's model: local git is free, only the
-# outward/destructive ops are walled; the human pushes after local review).
+# Forge-specific: blocks merge/force/reset/clean/branch -D and every push that
+# is not the forge-loop's scoped exception — but ALLOWS git add/commit/gh pr
+# create (Forge's model: local git is free, only the outward/destructive ops are
+# walled). The ONE sanctioned push is `git push [-u] origin agent/<branch>` (the
+# loop publishing its PR branch — loop-push-guard.sh validates it strictly);
+# everything else the human pushes after local review.
 # Also blocks raw-shell writes to .claude/settings.json: the Edit/Write tools are
 # denied for it, and this closes the Bash(*) gap so the safety walls can't be
 # rewritten by an agent. That file is human-only.
@@ -26,7 +29,6 @@ fi
 
 # Operations Forge walls off (the human does these, or they're destructive):
 DANGEROUS_PATTERNS=(
-  "git push"            # push to remote — human-only, after local review
   "push --force"
   "git merge"           # merge — human-only
   "git reset --hard"    # destructive history/worktree wipe
@@ -42,6 +44,19 @@ for pattern in "${DANGEROUS_PATTERNS[@]}"; do
     exit 2
   fi
 done
+
+# Push scope — the forge-loop exception. Agents may push ONLY an agent/* branch
+# to origin (publishing a loop PR branch); every push segment in the command must
+# match that exact shape or the whole command is blocked. loop-push-guard.sh then
+# validates the sanctioned segment strictly (flags, single ref, no refspecs).
+if printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+push'; then
+  while IFS= read -r seg; do
+    if ! printf '%s' "$seg" | grep -qE '^git[[:space:]]+push[[:space:]]+((-u|--set-upstream)[[:space:]]+)?origin[[:space:]]+agent/[^[:space:]]+[[:space:]]*$'; then
+      echo "BLOCKED: '$COMMAND' pushes outside the loop scope. Agents may run exactly 'git push [-u] origin agent/<branch>' (the forge-loop publishing its PR branch); the human pushes everything else after local review." >&2
+      exit 2
+    fi
+  done < <(printf '%s' "$COMMAND" | grep -oE 'git[[:space:]]+push[^|&;]*')
+fi
 
 # Settings lockdown — block shell writes to .claude/settings.json. Edit/Write are
 # denied for it, but Bash(*) could still rewrite it, so close that here. Matches a

@@ -19,9 +19,12 @@ improve.
 | /maintain | 5     | 5/5           | 2026-06-25   | provisional, 1× (E2 tightened → surfaced + fixed a gates-field gap) |
 | /brainstorm | 5   | 5/5           | 2026-06-25   | provisional, 1× (added H3 brief-persistence) |
 | /improve-arch | 6 | 6/6           | 2026-06-25   | provisional, 1× (H1 now requires a specific shallowness diagnosis) |
+| /automerge | 9   | 9/9           | 2026-08-04   | provisional, 1× (graded against the command + guard-hook text; E1/A3 are mechanically enforced by the hook, A1/E2/E3 compelled by the contract wording) |
+| /forge-loop | 9  | 9/9           | 2026-08-04   | provisional, 1× (graded against the command + guard text; A3/push-scope backed by a 25-case guard behavior test; A1/A2 label-authorization compelled by the command wording) |
 
-**Coverage: 12 of 12 commands** (`/start` excluded — pure onboarding). **71 cases**
-total (was 5 suites / 31 cases before 2026-06-25; +verifier E4 on 2026-08-01).
+**Coverage: 14 of 14 commands** (`/start` excluded — pure onboarding). **89 cases**
+total (was 5 suites / 31 cases before 2026-06-25; +verifier E4 on 2026-08-01;
++/automerge and /forge-loop suites, 9 cases each, on 2026-08-04).
 
 > **PROVISIONAL baseline.** Cases were executed against the machinery and graded
 > strictly vs each PASS-IF — /assess, verifier and /improve at 3× (median of 3),

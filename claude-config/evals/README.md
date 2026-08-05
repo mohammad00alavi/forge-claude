@@ -4,10 +4,10 @@ These test the SYSTEM (does /assess still tier right, does the verifier still
 catch defects), not your ventures. Full discipline:
 skills/forge-playbook/references/eval-harness.md
 
-- Golden cases per capability — 12 suites: `assess.md`, `verifier.md`,
+- Golden cases per capability — 14 suites: `assess.md`, `verifier.md`,
   `improve.md`, `fix.md`, `research.md`, `architect.md`, `forge.md`, `gtm.md`,
-  `grill.md`, `maintain.md`, `brainstorm.md`, `improve-arch.md`. (`/start` is
-  excluded — pure onboarding.)
+  `grill.md`, `maintain.md`, `brainstorm.md`, `improve-arch.md`,
+  `automerge.md`, `forge-loop.md`. (`/start` is excluded — pure onboarding.)
 - `BASELINE.md` — pinned pass-rates; the regression reference.
 
 MANDATORY: run the affected capability's suite BEFORE and AFTER every /improve.

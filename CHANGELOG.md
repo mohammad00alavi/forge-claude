@@ -260,3 +260,70 @@ confirmed patterns, ship on human approval. Everything lives in `maintenance/`
   needs ANTHROPIC_API_KEY, opens a PR). Copy to `.github/workflows/` to enable.
 - Anti-thrash by design: acts only on patterns seen ≥2× / a `↑↑` learning / an
   eval regression, ≤2 edits per run, with a cool-down on recently-touched files.
+
+## 2026-08-04 — /automerge toggle (Option A, opt-in agent merge)
+
+Design record: `docs/design/automerge/`. One human-set switch, both modes work:
+OFF (default) = agents stop at a ready PR, the human merges — unchanged Forge
+behavior. ON = agents may squash-merge THEIR OWN PRs, only under the merge-step
+contract: review threads resolved (bots incl.), CI green, behind-zero via
+`gh pr update-branch`, fresh gate, no `human:*`/`automerge:halt`, no protected
+paths, never `--admin`.
+
+- **Repo (maintainer):** `maintenance/automerge.command.md`,
+  `maintenance/forge-loop-merge-step.md` (the contract),
+  `maintenance/automerge-merge-guard.sh` (PreToolUse wall: variable + fresh
+  `forge-lint`, fail-closed).
+- **Installs (shipped):** `claude-config/commands/automerge.md`,
+  `claude-config/hooks/automerge-merge-guard.sh`, wired in
+  `claude-config/settings.json`. Also closes a pre-existing gap: `gh pr merge`
+  was walled by neither the deny list nor `block-dangerous-git.sh`; it is now
+  fail-closed behind the toggle in every install.
+
+## 2026-08-04 — Forge loop, forge-loop-ready (maintainer-only)
+
+The repo's standing loop, lean edition: queue = GitHub issues labelled
+`forge-loop-ready` (maintainer-applied — the injection guardrail); one iteration =
+return path first (threads/CI/behind on open agent PRs), then one issue →
+`agent/gh-<N>` worktree → maker (fixer/builder) → gate (`forge-lint` + affected
+eval suite vs BASELINE) → fresh-context verifier → ready PR `Closes #N` →
+toggle-aware merge step. Maker ≠ checker; the gate decides done.
+
+- `maintenance/forge-loop.md` (playbook + one-time activation runbook),
+  `maintenance/LOOP-STATE.md` (caps · escalate · roles · stop condition ·
+  lessons), `maintenance/forge-loop.command.md` (optional `/forge-loop`).
+- `maintenance/loop-push-guard.sh` — Wall 1's loop exception made mechanical:
+  `git push` only as `git push [-u] origin agent/<branch>`; force/delete/tags/
+  refspecs/non-origin all blocked (12-case behavior test in-repo).
+- `docs/agents/{issue-tracker,triage-labels,domain}.md` — config trio for
+  issue-shaping skills: GitHub tracker, `ready-for-agent`==`forge-loop-ready` bridge,
+  domain-doc map.
+- Deliberately NOT ported from the reference implementation: merge queue,
+  scope/rate breakers, scheduled daemon workflows, verdict panel — volume
+  machinery a one-maintainer repo doesn't need yet (see docs/design/automerge/
+  option C for the record).
+
+## 2026-08-04 — Consumer forge loop: the dev loop ships to every install
+
+The loop is no longer maintainer-only — consumers get the full cycle in their
+own projects: human labels issues `forge-loop-ready` → `/forge-loop` builds each
+in an `agent/gh-<N>` worktree via a maker sub-agent → the PROJECT's own gate
+(package.json scripts / STATE Gates / asked once, recorded) → fresh-context
+verifier → ready PR `Closes #N` → toggle-aware merge step (`/automerge`) → next
+issue. Agents may DRAFT issues (labelled `needs-triage`); only the human's
+`forge-loop-ready` label queues work — the injection guardrail, unchanged.
+
+- **Shipped:** `claude-config/commands/forge-loop.md` (the loop, repo resolved
+  from the git remote, conventions + issue template embedded; per-project state
+  in `.claude/loop/LOOP-STATE.md`), `claude-config/hooks/loop-push-guard.sh`,
+  both wired in `claude-config/settings.json`. Evals: `forge-loop` suite
+  (9 cases), BASELINE 14/14 commands, 89 cases.
+- **PUSH WALL, v3.9.5 model:** the blanket push deny moved into the hooks so the
+  loop can publish PR branches — `block-dangerous-git.sh` now blocks every push
+  whose segments aren't exactly the sanctioned
+  `git push [-u] origin agent/<branch>` shape, and `loop-push-guard.sh`
+  validates it strictly (no force/delete/refspecs/tags/other remotes). 25-case
+  behavior test green across both guards. Merge stays fail-closed behind
+  `/automerge on`; force-push/merge/deploy stay denied in settings;
+  `forge-lint` check 4 now asserts the new wall (force-push deny + all three
+  guards wired) instead of the old blanket deny.

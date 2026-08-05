@@ -41,12 +41,16 @@ if grep -rqi '## System fixes' "$CFG"/memory/learnings.md 2>/dev/null; then
   bad "'## System fixes' in learnings.md — machinery changes belong in CHANGELOG.md"
 else pass "learnings.md holds no machinery log"; fi
 
-# 4. Safety walls intact in settings.json.
+# 4. Safety walls intact in settings.json. The push wall is hook-scoped since
+# v3.9.5: force-push/merge/deploy stay denied, settings-edit stays locked, and
+# BOTH loop guards (push scope + merge toggle) must be wired as PreToolUse hooks.
 S="$CFG/settings.json"
-if grep -Fq '"Bash(git push:*)"' "$S" && grep -Fq '"Bash(git merge:*)"' "$S" \
-   && grep -Fq '"Bash(*deploy*)"' "$S" && grep -Fq 'Edit(.claude/settings.json)' "$S"; then
-  pass "settings.json walls intact (push/merge/deploy denied; settings-edit gated)"
-else bad "settings.json is missing a wall (push/merge/deploy) or the settings-edit gate"; fi
+if grep -Fq '"Bash(git push --force:*)"' "$S" && grep -Fq '"Bash(git merge:*)"' "$S" \
+   && grep -Fq '"Bash(*deploy*)"' "$S" && grep -Fq 'Edit(.claude/settings.json)' "$S" \
+   && grep -Fq 'block-dangerous-git.sh' "$S" && grep -Fq 'loop-push-guard.sh' "$S" \
+   && grep -Fq 'automerge-merge-guard.sh' "$S"; then
+  pass "settings.json walls intact (force-push/merge/deploy denied; guards wired; settings-edit gated)"
+else bad "settings.json is missing a wall (force-push/merge/deploy), a guard hook (git/push/merge), or the settings-edit gate"; fi
 
 # 5. Every reference cited in SKILL.md exists on disk.
 SKILL=$(find "$CFG"/skills -name SKILL.md 2>/dev/null | head -1)
