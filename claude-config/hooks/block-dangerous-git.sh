@@ -51,7 +51,7 @@ done
 # validates the sanctioned segment strictly (flags, single ref, no refspecs).
 if printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+push'; then
   while IFS= read -r seg; do
-    if ! printf '%s' "$seg" | grep -qE '^git[[:space:]]+push[[:space:]]+((-u|--set-upstream)[[:space:]]+)?origin[[:space:]]+agent/[^[:space:]]+[[:space:]]*$'; then
+    if ! printf '%s' "$seg" | grep -qE '^git[[:space:]]+push[[:space:]]+((-u|--set-upstream)[[:space:]]+)?origin[[:space:]]+agent/[^:[:space:]]+[[:space:]]*$'; then
       echo "BLOCKED: '$COMMAND' pushes outside the loop scope. Agents may run exactly 'git push [-u] origin agent/<branch>' (the forge-loop publishing its PR branch); the human pushes everything else after local review." >&2
       exit 2
     fi

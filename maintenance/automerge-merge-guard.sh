@@ -30,8 +30,27 @@ if printf '%s' "$COMMAND" | grep -q -- '--admin'; then
   exit 2
 fi
 
+# The contract's merge mode is exactly --squash --delete-branch; merge commits,
+# rebases, and kept branches are never sanctioned (checked before the toggle so
+# a wrong mode is blocked deterministically, even offline).
+if printf '%s' "$COMMAND" | grep -qE -- '--merge|--rebase'; then
+  echo "BLOCKED: the contract merge mode is --squash (never --merge/--rebase). Use 'gh pr merge <N> --squash --delete-branch' or leave the PR for the human." >&2
+  exit 2
+fi
+if ! printf '%s' "$COMMAND" | grep -q -- '--squash' || ! printf '%s' "$COMMAND" | grep -q -- '--delete-branch'; then
+  echo "BLOCKED: the contract merge is exactly 'gh pr merge <N> --squash --delete-branch' — both flags required." >&2
+  exit 2
+fi
+
 REPO="mohammad00alavi/forge-claude"
+
+# Gate root: the contract runs the fresh gate in the PR's OWN worktree. Use the
+# session's cwd when it is a Forge checkout (worktree merges gate the worktree);
+# fall back to the project root otherwise.
+CWD=""
+command -v jq >/dev/null 2>&1 && CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty' 2>/dev/null)
 ROOT="${CLAUDE_PROJECT_DIR:-$(pwd)}"
+[ -n "$CWD" ] && [ -f "$CWD/maintenance/forge-lint.sh" ] && ROOT="$CWD"
 
 # 1. The human-set toggle. Unset, false, or unreadable == OFF.
 STATE=$(gh variable get LOOP_AUTOMERGE -R "$REPO" 2>/dev/null)

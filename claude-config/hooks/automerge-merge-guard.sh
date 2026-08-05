@@ -29,6 +29,18 @@ if printf '%s' "$COMMAND" | grep -q -- '--admin'; then
   exit 2
 fi
 
+# The contract's merge mode is exactly --squash --delete-branch; merge commits,
+# rebases, and kept branches are never sanctioned (checked before the toggle so
+# a wrong mode is blocked deterministically, even offline).
+if printf '%s' "$COMMAND" | grep -qE -- '--merge|--rebase'; then
+  echo "BLOCKED: the contract merge mode is --squash (never --merge/--rebase). Use 'gh pr merge <N> --squash --delete-branch' or leave the PR for the human." >&2
+  exit 2
+fi
+if ! printf '%s' "$COMMAND" | grep -q -- '--squash' || ! printf '%s' "$COMMAND" | grep -q -- '--delete-branch'; then
+  echo "BLOCKED: the contract merge is exactly 'gh pr merge <N> --squash --delete-branch' — both flags required." >&2
+  exit 2
+fi
+
 # The human-set toggle, read from THIS project's repo (hook cwd == project root).
 STATE=$(gh variable get LOOP_AUTOMERGE 2>/dev/null)
 if [ "$STATE" != "true" ]; then

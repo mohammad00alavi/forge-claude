@@ -327,3 +327,10 @@ issue. Agents may DRAFT issues (labelled `needs-triage`); only the human's
   `/automerge on`; force-push/merge/deploy stay denied in settings;
   `forge-lint` check 4 now asserts the new wall (force-push deny + all three
   guards wired) instead of the old blanket deny.
+- **Review hardening (PR #7, Copilot):** both merge-guard editions now enforce
+  the exact contract mode — `--squash --delete-branch` required, `--merge`/
+  `--rebase` blocked, checked before the toggle so wrong modes fail even
+  offline; the maintainer guard's fresh gate runs against the session's
+  worktree (not the repo root) when merging from one; the push-scope regex
+  forbids `:` so an `agent/<src>:<dst>` refspec can't retarget a protected
+  ref. Guard behavior tests 25 → 42 cases, all green.
