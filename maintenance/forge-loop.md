@@ -28,6 +28,13 @@ stop condition, lessons), then the VISION: `README.md`, `CHANGELOG.md`,
 
 ## 2. Return path first — clear feedback before new work
 
+**Approval comes LAST.** The merge guard ties an approving review to the PR's
+head commit, so every push after approval — a CI fix, a thread fix, or the merge
+commit `gh pr update-branch` creates — makes it stale. Per PR: threads resolved
+→ CI green → behind-zero → gate green → **then** request review. Re-requesting
+after an unavoidable late push is correct, not an error; never dismiss a review
+or approve to clear one.
+
 For each open agent PR (`agent/*` head, `Closes #N` in body):
 
 - Unresolved review threads, human AND bot (Copilot included) — list them:

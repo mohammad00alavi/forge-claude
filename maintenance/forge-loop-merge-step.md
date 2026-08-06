@@ -9,6 +9,22 @@ the standing contract `/automerge` points at.
 Run the steps in order, per open agent-owned PR. Every `gh` call passes
 `-R mohammad00alavi/forge-claude`.
 
+Every condition below is **also enforced mechanically** by
+`maintenance/automerge-merge-guard.sh`, which reads the PR's real state from
+GitHub before letting `gh pr merge` through: checks green (pending counts as not
+green), no `human:*`/`automerge:halt` label on the PR or any open issue, no
+protected path in the diff, not behind or conflicted, no unresolved review
+thread, an approving review **on the current head commit**, plus a fresh
+`forge-lint`. Unreadable state fails closed. Satisfy the steps because they are
+right, not because the wall is watching — but the wall is watching.
+
+**Order matters: approval comes LAST.** An approval is a verdict on one commit.
+GitHub leaves `reviewDecision` at APPROVED after later pushes, but this guard
+compares the approval's commit to the PR's head — so any push after approval,
+**including `gh pr update-branch`**, makes it stale. Land every fix first, get
+to behind-zero, then request review on the final head. A stale approval is not a
+malfunction; it means re-request and wait.
+
 ## 0. Toggle
 
 `gh variable get LOOP_AUTOMERGE` — anything but `true` (including unset or an
@@ -46,7 +62,10 @@ remembered earlier result. Red gate → fix or leave ready with a comment.
 ## 5. Merge
 
 `gh pr merge <N> --squash --delete-branch -R mohammad00alavi/forge-claude`
-— never `--admin` (bypassing protections is not a thing agents do). Anything
+— exactly that shape, and nothing else: the PR named by NUMBER (a branch or URL
+target is rejected), the repo spelled literally (the guard cannot expand shell
+variables), no unrecognized flags, and never `--admin` (bypassing protections is
+not a thing agents do). Anything
 still red at any step: leave the PR **ready** and comment exactly what blocked
 the merge (the write-back). Releases are out of scope entirely: tagging stays
 human-triggered via `release-gate.sh`.

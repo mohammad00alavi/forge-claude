@@ -1,0 +1,71 @@
+#!/bin/bash
+# Fake `gh` for offline guard tests — PATH-prepended by run.sh.
+#
+# Serves fixtures selected by FIXTURE (default: fresh-approval). Only the
+# subcommands the guards actually call are implemented; anything else exits 1 so
+# a guard that reaches for an unexpected call fails loudly rather than silently.
+#
+# PR numbers: 42/5/7 = agent PRs (head agent/gh-<n>), 99 = a human PR.
+# Commits: HEAD_OID is the PR's current head; APPROVED_OID is what the approving
+# review was submitted against. They differ in the stale fixtures.
+F="${FIXTURE:-fresh-approval}"
+
+HEAD_OID="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+APPROVED_OID="$HEAD_OID"
+RD="APPROVED"
+REQUIRE_APPROVAL="unset"     # unset -> `gh variable get` exits 1, as GitHub does
+REVIEWS_READABLE=1
+
+case "$F" in
+  fresh-approval)        ;;
+  stale-approval)        APPROVED_OID="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" ;;
+  stale-approval-optout) APPROVED_OID="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"; REQUIRE_APPROVAL="false" ;;
+  changes-requested)     RD="CHANGES_REQUESTED" ;;
+  changes-requested-stale) RD="CHANGES_REQUESTED"; APPROVED_OID="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" ;;
+  no-review)             RD=""; APPROVED_OID="" ;;
+  no-review-optout)      RD=""; APPROVED_OID=""; REQUIRE_APPROVAL="false" ;;
+  reviews-unreadable)    REVIEWS_READABLE=0 ;;
+esac
+
+case "$1 $2" in
+  "repo view")    echo "mohammad00alavi/forge-claude"; exit 0 ;;
+  "issue list")   echo 0; exit 0 ;;
+  "variable get")
+    case "$3" in
+      LOOP_AUTOMERGE) echo "true"; exit 0 ;;
+      LOOP_REQUIRE_APPROVAL)
+        [ "$REQUIRE_APPROVAL" = "unset" ] && exit 1
+        echo "$REQUIRE_APPROVAL"; exit 0 ;;
+    esac
+    exit 1 ;;
+esac
+
+# GraphQL: the guards ask two things — unresolved review threads, and approving
+# reviews with the commit each was submitted against.
+if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
+  ALL="$*"
+  case "$ALL" in
+    *reviewThreads*) echo 0; exit 0 ;;
+    *reviews*)
+      [ "$REVIEWS_READABLE" = "0" ] && exit 1
+      # run.sh asserts on the guard's decision, so mimic gh --jq: the guard
+      # passes either a count-of-matching filter or a "last oid" extraction.
+      case "$ALL" in
+        *select*)
+          [ -n "$APPROVED_OID" ] && [ "$APPROVED_OID" = "$HEAD_OID" ] && echo 1 && exit 0
+          echo 0; exit 0 ;;
+        *)
+          printf '%s\n' "${APPROVED_OID:-unknown}"; exit 0 ;;
+      esac ;;
+  esac
+  exit 1
+fi
+
+if [ "$1" = "pr" ] && [ "$2" = "view" ]; then
+  case "$3" in 42|5|7) HEAD="agent/gh-$3" ;; 99) HEAD="release/v3.9.4" ;; *) exit 1 ;; esac
+  printf '{"headRefName":"%s","headRefOid":"%s","statusCheckRollup":[{"conclusion":"SUCCESS"}],"labels":[],"files":[{"path":"src/app.ts"}],"mergeStateStatus":"CLEAN","mergeable":"MERGEABLE","state":"OPEN","reviewDecision":"%s"}\n' \
+    "$HEAD" "$HEAD_OID" "$RD"
+  exit 0
+fi
+
+exit 1

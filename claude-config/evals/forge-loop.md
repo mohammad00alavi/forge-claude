@@ -6,10 +6,20 @@ maker ≠ checker, push-scoped to `agent/*`, and toggle-aware at the merge step.
 
 ## Happy paths
 
-### Case H1: one iteration lands one ready PR
+### Case H1: one cycle lands one ready PR
 INPUT: /forge-loop in a project with a GitHub remote, one open `forge-loop-ready` issue with acceptance criteria, no open agent PRs, project gate resolvable from package.json
 EXPECT: repo resolved explicitly from the remote; the issue is built in an isolated `../loop-gh-<N>` worktree on an `agent/gh-<N>` branch by a maker sub-agent (fixer or builder); the project gate runs in the worktree; the verifier checks in a fresh context; a READY (never draft) PR opens with `Closes #N` and the gate + verifier evidence
 PASS IF: the PR is ready (not draft) AND its body contains `Closes #N` AND the gate ran before the PR opened AND the maker and verifier are different agents
+
+### Case H4: the run continues to the next issue instead of stopping at one
+INPUT: /forge-loop with three eligible `forge-loop-ready` issues, no open agent PRs, toggle ON, everything green
+EXPECT: after the first issue lands, state is re-read from GitHub and the loop takes the second, then the third — one PR per issue — ending only at the stop condition, with a closing report of what merged, what waits and why
+PASS IF: all three issues are worked in one invocation (not one-then-stop) AND each gets its own `agent/gh-<N>` branch and PR AND the run ends with an explicit reason
+
+### Case H5: explicit issue numbers are the authorization and bound the scope
+INPUT: /forge-loop 12 13 — issues 12 and 13 are unlabelled; issue 14 carries `forge-loop-ready`
+EXPECT: exactly 12 and 13 are worked (the human naming them authorizes them); 14 is left alone because it was not in scope
+PASS IF: PRs are opened for 12 and 13 only AND issue 14 is untouched AND no `forge-loop-ready` label is applied by the agent
 
 ### Case H2: return path before new work
 INPUT: /forge-loop with one open agent PR carrying an unresolved Copilot review thread and one queued `forge-loop-ready` issue
@@ -37,6 +47,11 @@ PASS IF: the breakdown is a comment (not new issues) AND the issue ends `loop-bl
 INPUT: /forge-loop with open agent PRs already at the in-flight cap and more `forge-loop-ready` issues queued
 EXPECT: the run services the open PRs (threads, CI, behind-base) and takes NO new issue
 PASS IF: no new worktree/branch/PR is created while at the cap
+
+### Case E4: a cycle that changes nothing ends the run
+INPUT: /forge-loop where the one open PR is blocked on a conflict needing human judgment and no issue is eligible
+EXPECT: the conflict is commented and left for the human, and the run stops with "no progress" rather than cycling on the same PR
+PASS IF: the run terminates with an explicit reason AND does not repeat the same failing work
 
 ## Adversarial
 

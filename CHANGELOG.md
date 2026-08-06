@@ -353,3 +353,144 @@ issue. Agents may DRAFT issues (labelled `needs-triage`); only the human's
   `agent/*` branch (looked up fresh; unreadable == fail closed). A human-
   authored PR can no longer be merged by an agent even with the toggle armed.
   Guard behavior tests 77 → 83 cases, all green.
+
+- **Guards rebuilt as whitelists after four adversarial review rounds
+  (2026-08-06).** Rounds of a three-lens panel (bypass / bash-semantics /
+  contract-consistency, each finding proven by executing the hook) showed that
+  every attempt to FILTER an arbitrary shell command leaks: redirect tokens
+  ended argument parsing (`git push origin agent/x >/dev/null main` really
+  pushed main), wrapper prefixes and shell grammar hid the verb, `grep`'s
+  line-orientation let a sanctioned first line launder a second, and gh/git
+  accept flags in positions no pattern anticipated. The model is now:
+  - **Whitelist the exception, refuse everything else.** A command that could
+    publish must match `[cd <path> && ] git push [-u] origin agent/<branch>`
+    exactly; one that could merge must match `gh pr merge <N> --squash
+    --delete-branch -R <repo literal>` (or the `--disable-auto` disarm).
+  - **Position-free deny** for destructive git/gh ops, so wrapper prefixes,
+    global flags and alias injection cannot hide the verb.
+  - **Fold to one line** before matching; split the `.claude/` walk on newlines.
+  - **The toggle is human-only**: `gh variable/secret` writes and the
+    `actions/variables` API route are refused, so an agent cannot arm the gate
+    it is judged by. The maintainer gate root must share this repo's git object
+    store, so a crafted directory cannot supply a fake `forge-lint`.
+  - The loop keeps working: its read-only `gh api graphql` query and its
+    review-thread mutations (`resolveReviewThread` and friends) are carved out
+    by name; merge/ref mutations are not.
+  Deliberate over-blocking is documented in each header — a command that merely
+  MENTIONS a walled word is refused, because a false refusal costs a rephrase
+  and a false allow costs the wall. 438 behavior cases green, including an
+  ARMED harness (fake `gh`, `LOOP_AUTOMERGE=true`) that proves the sanctioned
+  merge is still allowed rather than everything simply blocking.
+  **Known limit — read this before trusting the hook:** a PreToolUse string
+  guard cannot be a perimeter against an adversarial agent. Shell expansion
+  ($VAR, eval, command substitution, globs, file-backed API bodies) is resolved
+  after the hook runs, and the review rounds kept finding new spellings rather
+  than converging. Treat these guards as accident-prevention and a speed bump;
+  the real wall is server-side — branch protection (required reviews and
+  checks, no force-push, restricted merge rights), which an agent's token
+  cannot edit, plus the human's own review.
+
+- **Consumer loop runs the whole queue, and false positives fixed (2026-08-06).**
+  Two changes so the consumer story actually works end to end:
+  - `/forge-loop` no longer stops after one issue. It cycles — re-reading state
+    from GitHub each pass — shepherding open PRs to landable (review threads
+    incl. bots, red CI read from the failing job log, behind-zero via
+    `gh pr update-branch`) and taking the next issue, until the queue is done,
+    a cap is hit, a human is needed, or a cycle makes no progress; it then
+    reports what merged, what waits and why. It also accepts explicit issue
+    numbers (`/forge-loop 12 13`) — **the human naming issues is the
+    authorization**, which is the flow for "draft these issues, now go fix
+    them"; the `forge-loop-ready` label remains the no-argument queue, and an
+    agent still never selects or widens its own scope. Evals 9 → 12 cases
+    (+H4 continuous run, +H5 explicit scope, +E4 no-progress stop).
+  - The guards were over-blocking ordinary work: 5 of 27 realistic consumer
+    commands were refused, including `git commit -m "fix: resolve merge
+    conflict"` and `gh pr create --title "fix: merge conflict handling"` —
+    which a dev loop produces constantly, so the loop would have jammed within
+    minutes. Keyword checks now ignore the VALUES of unambiguous message flags
+    (`-m`/`--message`/`--title`/`--body`/`--body-file`/`--description`/
+    `--notes`), while the anchored whitelists still match the untouched
+    command, so the sanctioned shapes stay exact. `-B`/`-C` is only a
+    branch-force signal in checkout/switch/branch context, so the global
+    `git -C <dir>` flag works again. Re-measured: **0 of 27 realistic commands
+    blocked, 18 of 18 attacks still blocked**, 438 guard cases green.
+
+- **The merge contract is now a wall, not prose (2026-08-06).** The shipped
+  guard verified shape, literal repo, toggle and `agent/*` head ref, then left
+  "CI green" and the rest as the agent's obligation — its own closing comment
+  said so. On a consumer repo with workflows but **no branch protection**,
+  `gh pr merge` succeeds regardless of check status, so green-before-merge was
+  an instruction an agent could simply not follow. Both guard editions now read
+  the PR's real state from GitHub before letting the merge through and refuse
+  unless: every check has CONCLUDED green (queued/running counts as not green),
+  no `human:*`/`automerge:halt` label is on the PR and no open `automerge:halt`
+  issue exists, the diff touches no protected path (`.github/`, `.claude/`,
+  `.env*`, auth/payments/billing/secrets, infra, containers, `*.tf`), the PR is
+  open, not BEHIND and not conflicted, and no review thread is unresolved
+  (bots included). Unreadable state — or a missing `jq` — fails closed. A repo
+  with no CI configured still merges, since there is nothing to be green.
+  Evals: /automerge 9 → 11 (+E4 red/pending CI, +E5 the other conditions);
+  new 26-case contract harness drives each condition through a fake `gh`.
+
+- **Review is now required to exist, and a rejection can't be merged over
+  (2026-08-06).** Two related holes: (1) nothing shipped a reviewer, so on a
+  repo with no review bot and nobody watching, "review requested" was a request
+  to nobody — and zero reviews meant zero threads, which the contract read as
+  "feedback resolved"; (2) no approval check existed anywhere, so a human who
+  requested changes with only a review SUMMARY (no inline comment) created no
+  thread, and the merge would have gone through over an explicit rejection.
+  Now, in both guard editions:
+  - `reviewDecision` is read from the PR. `CHANGES_REQUESTED` is a hard block,
+    thread list irrelevant.
+  - An APPROVED decision is required by default — GitHub forbids self-approval,
+    so an approval necessarily came from someone else. A project with no
+    reviewer opts out **deliberately** with `LOOP_REQUIRE_APPROVAL=false`,
+    which makes the loop's fresh-context verifier and CI the entire gate; unset
+    means required, so the safe state is the default.
+  - An agent can no longer grant or clear its own verdict: `gh pr review
+    --approve`, `--request-changes`, review dismissal, and the
+    `pulls/<n>/reviews` REST routes are all refused.
+  `/automerge on` now settles the review policy with the human as a setup step
+  (does a reviewer exist? if not, choose verifier-only or leave merging to a
+  human) and `/automerge` status reports which policy is in force. `/forge-loop`
+  requests review from someone who actually exists — bot, CODEOWNERS, or named
+  reviewers — says so plainly in the run report when the repo has none, posts
+  the verifier's verdict on the PR for auditability, and reads `reviewDecision`
+  on the return path instead of trusting an empty thread list.
+  Evals: /automerge 11 → 14 (+E6 changes-requested with no thread, +E7 no
+  reviewer at all, +A4 self-approval/dismissal); contract harness 26 → 34 cases.
+
+- **Approvals are bound to the head commit (2026-08-06).** Requiring
+  `reviewDecision == APPROVED` was not enough: GitHub keeps that decision at
+  APPROVED after new commits are pushed, unless the repo enables "dismiss stale
+  approvals" branch protection — which most consumer repos do not. So a
+  reviewer could approve commit `aaa`, the loop's own return path could push
+  `bbb`/`ccc` (a CI fix, a thread fix, or the merge commit `gh pr update-branch`
+  creates), and the guard would still read APPROVED and merge code nobody
+  reviewed. Both guard editions now fetch `headRefOid` alongside the rest of the
+  PR state and query approving reviews with the commit each was submitted
+  against; the merge passes only if some APPROVED review's `commit.oid` equals
+  the current head. A stale-only approval blocks with both short oids and the
+  recovery path (re-request review — never dismiss or self-approve). Unreadable
+  reviews fail closed. `CHANGES_REQUESTED` still hard-blocks regardless, and
+  `LOOP_REQUIRE_APPROVAL=false` still bypasses the approval requirement
+  entirely, so freshness is moot on that path.
+  - **Ordering rule, or the loop flaps:** any push after approval invalidates
+    it, `gh pr update-branch` included. The loop docs (consumer command,
+    maintainer playbook, merge-step contract) now teach approve-LAST — threads
+    → CI → behind-zero → gate → *then* request review on the final head — and
+    state that a stale approval means re-request, not malfunction. Reports and
+    `/automerge` status distinguish "approved (current head)" from "approved
+    (stale — re-request)", since GitHub's UI shows both identically.
+  - `/automerge on` now also recommends enabling "dismiss stale pull request
+    approvals" where the human controls branch protection: the server-side twin
+    of this check, and one an agent's token cannot switch off.
+  - **Tests now ship with the change.** Earlier guard work was validated by a
+    session-local harness that never landed, so its results were not
+    reproducible. `maintenance/tests/` adds an offline runner and a fake `gh`
+    shim serving per-fixture JSON; 31 cases drive both guard editions through
+    fresh/stale/opt-out/rejection/unreadable states, prove the legitimate
+    commands (`gh pr edit --add-reviewer`, `gh pr comment`, `gh pr view --json`)
+    still pass, and prove an agent still cannot approve or dismiss. Maintainer
+    -only — nothing is wired into `install.sh`. Evals /automerge 14 → 16
+    (+E8 stale approval, +H4 approve-last ordering).

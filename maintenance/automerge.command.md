@@ -18,10 +18,17 @@ repo explicitly: `-R mohammad00alavi/forge-claude` (cwd is not a fact you have).
 1. `gh variable set LOOP_AUTOMERGE --body true -R mohammad00alavi/forge-claude`
 2. Confirm labels exist (create any missing): `automerge:halt`, `human:authorize`,
    `human:decide` — `gh label list -R mohammad00alavi/forge-claude`.
-3. Report: the toggle state, the merge-step contract in one line (threads
-   resolved incl. bots · CI green · 0 behind · fresh `forge-lint` green · no
-   `human:*` / `automerge:halt` · no escalate paths), and which currently open
-   PRs would become eligible.
+3. Settle the review policy: does this repo have a reviewer (review bot,
+   CODEOWNERS, named reviewers)? The guard requires an approving review **on the
+   PR's current head commit** unless `LOOP_REQUIRE_APPROVAL` is `false`. Where
+   branch protection is in reach, **recommend** enabling "dismiss stale pull
+   request approvals when new commits are pushed" — the server-side twin of that
+   check, and one an agent's token cannot switch off.
+4. Report: the toggle state, the review policy in force, the merge-step contract
+   in one line (threads resolved incl. bots · approval on the current head · CI
+   green · 0 behind · fresh `forge-lint` green · no `human:*` /
+   `automerge:halt` · no escalate paths), and which currently open PRs would
+   become eligible.
 
 ## off
 
@@ -33,8 +40,14 @@ repo explicitly: `-R mohammad00alavi/forge-claude` (cwd is not a fact you have).
 ## status (no argument)
 
 Print `gh variable get LOOP_AUTOMERGE -R mohammad00alavi/forge-claude` (unset
-== off), the open PRs with their eligibility (what blocks each: threads / CI /
-behind / labels / escalate paths), and where the contract lives.
+== off), the review policy (`LOOP_REQUIRE_APPROVAL` unset/true = an approving
+review on the current head is required; false = the verifier is the only
+checker), the open PRs with their eligibility (what blocks each: review decision
+/ threads / CI / behind / labels / escalate paths), and where the contract
+lives. In the review column separate **approved (current head)** from
+**approved (stale — re-request)** by comparing each approving review's commit
+with `headRefOid`: a stale approval looks identical to a fresh one in GitHub's
+UI, so saying which it is carries the whole signal.
 
 <!--
 This is the optional `/automerge` slash command for the FORGE REPO ONLY.

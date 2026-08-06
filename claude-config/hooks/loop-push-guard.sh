@@ -1,72 +1,72 @@
 #!/bin/bash
 # Forge loop push guard (shipped to installs as .claude/hooks/) — PreToolUse on Bash.
-# The forge loop needs to push PR branches, but Forge's wall says agents don't
-# push. This is the branch-scoped exception, made mechanical: a `git push` is
-# allowed ONLY when it pushes an agent/* branch to origin — nothing else, ever.
-# It works with block-dangerous-git.sh (which blocks non-loop pushes outright);
-# this guard validates the sanctioned shape strictly.
 #
-# Allowed:  git push -u origin agent/gh-42   ·  git push origin agent/fix-lint
-# Blocked:  push to main/master/release*/HEAD, any --force/-f, --delete/-d,
-#           --mirror/--all/--tags, tag refspecs, refspecs with a colon,
-#           non-origin remotes, and any push whose target can't be parsed.
+# The forge loop needs to publish PR branches, but Forge's wall says agents
+# don't push. This is that exception, made mechanical — and it is a WHITELIST,
+# not a filter: if a command could publish anything, it must match the ONE
+# sanctioned shape exactly, or it is refused.
+#
+#   [cd <path> && ] git push [-u|--set-upstream] origin agent/<branch>
+#
+# Refused: any other remote or branch, force/delete/tags/mirror/prune, src:dst
+# refspecs, multiple refs, git global flags (-c/-C/--git-dir/…), send-pack,
+# subtree push, redirects, chained or multi-line commands, wrapper prefixes
+# (command/env/sudo/…) — anything whose meaning this guard cannot verify by
+# inspection. Deviating from the sanctioned form is not an error to be parsed
+# around: run the plain command instead.
+#
+# The whole command is folded to ONE line before matching, so a multi-line or
+# backslash-continued command cannot hide a second push behind a sanctioned
+# first line (grep anchors per line, not per command).
+#
+# Residual, by design: shell EXPANSION cannot be resolved by a string guard —
+# $VAR, eval, command substitution, and glob-spelled paths reach the shell as
+# something this hook never saw. The settings ask-gate, branch protection, and
+# human review back this wall.
 
 INPUT=$(cat)
 
 if command -v jq >/dev/null 2>&1; then
   COMMAND=$(printf '%s' "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
 else
-  COMMAND=$(printf '%s' "$INPUT" | sed -n 's/.*"command"[[:space:]]*:[[:space:]]*"\(.*\)".*/\1/p')
+  # Portable fallback: the "command" value, honoring backslash escapes so a
+  # quote inside the command can't truncate what we extract.
+  # decode the JSON escapes too — \n/\t left raw would fuse words together
+  # and hide keywords from every check below.
+  COMMAND=$(printf '%s' "$INPUT" \
+    | grep -oE '"command"[[:space:]]*:[[:space:]]*"([^"\\]|\\.)*"' | head -1 \
+    | sed 's/^"command"[[:space:]]*:[[:space:]]*"//; s/"$//' \
+    | sed 's/\\n/ /g; s/\\t/ /g; s/\\r/ /g; s/\\"/"/g; s/\\\\/\\/g')
 fi
 
 [ -z "$COMMAND" ] && exit 0
 
-# Shell-quoting evasion (git\ push, "git" "push", g'i't …): run every check
-# against a normalized copy with backslashes and quotes stripped. $VAR/eval
-# indirection is beyond a string guard — the ask-gate and branch protection
-# back this wall.
-DETECT=$(printf '%s' "$COMMAND" | sed 's/\\//g; s/"//g; s/'"'"'//g')
+# Fold to one line FIRST (so `\<newline>` becomes whitespace, not a line break),
+# then collapse quoting evasion (git\ push, "git" "push", g'i't …).
+# Matched against, never executed.
+DETECT=$(printf '%s' "$COMMAND" | tr '\n\r\t' '   ' | sed 's/\\//g; s/"//g; s/'"'"'//g')
 
-# Global git flags before 'push' (-c/-C/--git-dir/…) can dodge the plain
-# 'git push' detection below and retarget the repo or config — never sanctioned.
-if printf '%s' "$DETECT" | grep -qE 'git([[:space:]]+-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*){0,2})+[[:space:]]+push([[:space:]]|$)'; then
-  echo "BLOCKED: git global flags before 'push' are not allowed. Loop pushes are exactly 'git push [-u] origin agent/<branch>' — nothing else. The human pushes everything else." >&2
-  exit 2
+# Message/title/body VALUES are data, not command words: a commit message or PR
+# title that says "merge" or "push" must not trip the keyword walls below. Only
+# unambiguous long-form message flags are stripped (never -d/-b/-t/-F, whose
+# short spellings mean other things to gh), and only for the KEYWORD checks —
+# the anchored whitelists still match the untouched command, so the sanctioned
+# shape stays exact.
+STRIPMSG='s/(^|[[:space:]])(-m|--message|--title|--body|--body-file|--description|--notes)([[:space:]]+|=)("[^"]*"|'"'"'[^'"'"']*'"'"'|[^[:space:]]*)/\1\2 MSGVALUE/g'
+DETECT_KW=$(printf '%s' "$COMMAND" | tr '\n\r\t' '   ' | sed -E "$STRIPMSG" | sed 's/\\//g; s/"//g; s/'"'"'//g')
+
+# Does this command touch a publishing verb at all? Trigger broadly: git AND
+# push in any spelling (including `-c alias.x=push`), or a low-level publish
+# verb. If neither appears, it is none of this guard's business.
+if ! printf '%s' "$DETECT_KW" | grep -q 'send-pack'; then
+  printf '%s' "$DETECT_KW" | grep -q 'git'  || exit 0
+  printf '%s' "$DETECT_KW" | grep -q 'push' || exit 0
 fi
 
-# Only push commands concern this guard.
-printf '%s' "$DETECT" | grep -qE 'git[[:space:]]+push' || exit 0
+# It does. Then it must be exactly the sanctioned shape — whole command.
+printf '%s' "$DETECT" \
+  | grep -qE '^[[:space:]]*(cd[[:space:]]+[^[:space:]|&;<>$`()]+[[:space:]]*&&[[:space:]]*)?git[[:space:]]+push([[:space:]]+(-u|--set-upstream))?[[:space:]]+origin[[:space:]]+agent/[A-Za-z0-9._-][A-Za-z0-9._/-]*[[:space:]]*$' \
+  && exit 0
 
-block() { echo "BLOCKED: $1 Loop pushes are exactly 'git push [-u] origin agent/<branch>' — nothing else. The human pushes everything else." >&2; exit 2; }
-
-# Never any force/delete/mass flavor, anywhere in the command.
-printf '%s' "$DETECT" | grep -qE -- '--force|--force-with-lease|(^|[[:space:]])-f([[:space:]]|$)|--delete|(^|[[:space:]])-d([[:space:]]|$)|--mirror|--all|--tags|--prune' \
-  && block "force/delete/mass push flags are never allowed."
-
-# Refspecs with a colon (src:dst) can retarget protected refs.
-printf '%s' "$DETECT" | grep -qE 'git[[:space:]]+push[^|&;]*[^-][[:space:]][^[:space:]]*:' \
-  && block "explicit refspecs (src:dst) are not allowed."
-
-# Extract the first `git push …` segment (stop at chaining operators).
-SEG=$(printf '%s' "$DETECT" | grep -oE 'git[[:space:]]+push[^|&;]*' | head -1)
-
-# Strip flags; expect exactly: remote 'origin' + one agent/* branch.
-set -- $SEG                      # $1=git $2=push $3...
-shift 2
-REMOTE=""; BRANCH=""; EXTRA=0
-for tok in "$@"; do
-  case "$tok" in
-    -u|--set-upstream) ;;                       # the one flag we accept
-    -*) block "flag '$tok' is not allowed on a loop push." ;;
-    *) if [ -z "$REMOTE" ]; then REMOTE="$tok"
-       elif [ -z "$BRANCH" ]; then BRANCH="$tok"
-       else EXTRA=1; fi ;;
-  esac
-done
-
-[ "$EXTRA" = 1 ] && block "multiple refs in one push are not allowed."
-[ "$REMOTE" = "origin" ] || block "remote '$REMOTE' is not 'origin'."
-case "$BRANCH" in
-  agent/?*) exit 0 ;;                            # the sanctioned shape
-  *) block "branch '${BRANCH:-<none>}' is not an agent/* branch." ;;
-esac
+echo "BLOCKED: '$COMMAND' is not the sanctioned publish. Loop pushes are exactly '[cd <path> && ] git push [-u] origin agent/<branch>' — no other branch or remote, no extra flags, no redirects, no chained or multi-line commands, no wrappers. The human pushes everything else." >&2
+exit 2
