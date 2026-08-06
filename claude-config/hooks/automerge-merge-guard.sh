@@ -47,6 +47,14 @@ if ! printf '%s' "$DETECT" | grep -q -- '--squash' || ! printf '%s' "$DETECT" | 
   exit 2
 fi
 
+# The contract names an explicit PR number (never a URL, branch, or bare merge)
+# so the own-PR scope check below is unambiguous.
+PRNUM=$(printf '%s' "$DETECT" | grep -oE 'merge[[:space:]]+[0-9]+' | grep -oE '[0-9]+' | head -1)
+if [ -z "$PRNUM" ]; then
+  echo "BLOCKED: the contract merge names an explicit PR number ('gh pr merge <N> --squash --delete-branch'). Bare/URL/branch targets are not sanctioned." >&2
+  exit 2
+fi
+
 # Resolve THIS project's repo and pin the merge to it: the toggle being honored
 # is this repo's, so a -R/--repo pointing anywhere else is never sanctioned.
 # Unresolvable repo == fail closed.
@@ -67,6 +75,16 @@ if [ "$STATE" != "true" ]; then
   echo "BLOCKED: agents do not merge in this project (LOOP_AUTOMERGE read: '${STATE:-unreadable}'). Open the PR ready and request review — the human merges. The human can opt in with /automerge on." >&2
   exit 2
 fi
+
+# Scope: agents merge only THEIR OWN PRs — the head ref must be an agent/*
+# branch. Human-authored PRs are always human-merged, toggle regardless.
+# Unreadable head ref == fail closed.
+HEADREF=$(gh pr view "$PRNUM" -R "$REPO" --json headRefName -q .headRefName 2>/dev/null)
+case "$HEADREF" in
+  agent/?*) : ;;
+  *) echo "BLOCKED: PR #$PRNUM head ref is '${HEADREF:-unreadable}', not an agent/* branch. Agents merge only their own loop PRs; this one is the human's to merge." >&2
+     exit 2 ;;
+esac
 
 # Toggle is on: the merge may proceed IF the /automerge contract was satisfied —
 # project gate green, review threads (incl. bots) resolved, CI green, PR not

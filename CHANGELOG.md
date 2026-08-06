@@ -347,3 +347,9 @@ issue. Agents may DRAFT issues (labelled `needs-triage`); only the human's
   detection. `$VAR`/`eval` indirection is documented as beyond a string guard's
   reach; the ask-gate, branch protection, and human review back that residual.
   Guard behavior tests 64 → 77 cases, all green.
+- **Review hardening, round 4 (PR #7, Copilot):** both merge guards now enforce
+  the contract's own-PR scope mechanically — the merge must name an explicit PR
+  number (bare/URL/branch targets blocked), and that PR's head ref must be an
+  `agent/*` branch (looked up fresh; unreadable == fail closed). A human-
+  authored PR can no longer be merged by an agent even with the toggle armed.
+  Guard behavior tests 77 → 83 cases, all green.
