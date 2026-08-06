@@ -494,3 +494,18 @@ issue. Agents may DRAFT issues (labelled `needs-triage`); only the human's
     still pass, and prove an agent still cannot approve or dismiss. Maintainer
     -only — nothing is wired into `install.sh`. Evals /automerge 14 → 16
     (+E8 stale approval, +H4 approve-last ordering).
+
+- **A broken wall pattern now refuses instead of going quiet (2026-08-06,
+  review follow-up).** `grep` exits 0 on match, 1 on no-match and >1 on a regex
+  ERROR — and the guards' `has`/`hasw` helpers read anything non-zero as "no
+  match". So a typo in any pattern would have switched that wall off silently,
+  with no failing test and no error anyone would see. The helpers now
+  distinguish the three cases and refuse the command when a pattern cannot
+  compile, so a guard bug fails closed rather than open. Verified by injecting
+  an uncompilable pattern into a copy of the guard: the command is blocked with
+  an explicit "wall pattern failed to compile" message. The `.claude/` glob
+  detection that prompted this (flagged in review for its `[*?[]` bracket
+  expression, which is valid ERE but easy to get wrong) is rewritten as plain
+  alternation, and the committed suite gained 11 cases covering each glob
+  spelling — `.claude/set*.json`, `.cla*/set*.json`, `.cla?ude/…`, `//` and
+  `/./` — plus the reads that must still pass. Suite 31 → 42 cases.

@@ -73,6 +73,29 @@ for g in "$CONSUMER" "$MAINTAINER" "$GITGUARD"; do
   run fresh-approval "$g" 0 "gh pr view --json"          "gh pr view 42 --json reviewDecision,headRefOid -R $REPO"
 done
 
+echo "== .claude/ is human-only, including glob-spelled paths =="
+# The glob subpatterns use bracket expressions that are easy to get subtly wrong;
+# if one failed to compile the wall would go quiet, so exercise each spelling.
+for c in \
+  'rm .claude/settings.json' \
+  'rm .claude/set*.json' \
+  'rm .cla*/set*.json' \
+  'rm .cla?ude/settings.json' \
+  'cp evil.json .claude/settings.json' \
+  'echo x > .claude/settings.json' \
+  'echo x > .claude//settings.json' \
+  'echo x > .claude/./settings.json'
+do
+  run fresh-approval "$GITGUARD" 2 "blocked: $c" "$c"
+done
+for c in \
+  'cat .claude/settings.json' \
+  'grep permissions .claude/settings.json' \
+  'jq .hooks .claude/settings.json'
+do
+  run fresh-approval "$GITGUARD" 0 "allowed: $c" "$c"
+done
+
 echo "== an agent never grants or clears a verdict =="
 for g in "$CONSUMER" "$MAINTAINER" "$GITGUARD"; do
   run fresh-approval "$g" 2 "gh pr review --approve"     "gh pr review 42 --approve -R $REPO"

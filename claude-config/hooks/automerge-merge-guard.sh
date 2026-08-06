@@ -62,8 +62,19 @@ STRIPMSG='s/(^|[[:space:]])(-m|--message|--title|--body|--body-file|--descriptio
 DETECT_KW=$(printf '%s' "$COMMAND" | tr '\n\r\t' '   ' | sed -E "$STRIPMSG" | sed 's/\\//g; s/"//g; s/'"'"'//g')
 
 block() { echo "BLOCKED: $1" >&2; exit 2; }
-has()  { printf '%s' "$DETECT_KW" | grep -qE "$1"; }
-hasw() { printf '%s' "$DETECT_KW" | grep -qE "(^|[^A-Za-z0-9_.-])$1([^A-Za-z0-9_.-]|$)"; }
+# grep exits 0 on match, 1 on no-match, and >1 on a REGEX ERROR. Treating an
+# error as "no match" would let a typo in any pattern below silently switch a
+# wall off, so an unusable pattern refuses the command instead.
+_grep_kw() {
+  printf '%s' "$DETECT_KW" | grep -qE -e "$1"
+  case $? in
+    0) return 0 ;;
+    1) return 1 ;;
+    *) block "internal guard error: a wall pattern failed to compile, so '$COMMAND' cannot be checked. That is a bug in this hook — refusing the command rather than letting it through unverified." ;;
+  esac
+}
+has()  { _grep_kw "$1"; }
+hasw() { _grep_kw "(^|[^A-Za-z0-9_.-])$1([^A-Za-z0-9_.-]|$)"; }
 
 # --- The toggle is the human's switch ---------------------------------------
 # An agent that can arm its own gate is not gated. Refused in every spelling:
