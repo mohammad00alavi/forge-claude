@@ -21,28 +21,34 @@ fi
 
 [ -z "$COMMAND" ] && exit 0
 
+# Shell-quoting evasion (git\ push, "git" "push", g'i't …): run every check
+# against a normalized copy with backslashes and quotes stripped. $VAR/eval
+# indirection is beyond a string guard — the ask-gate and branch protection
+# back this wall.
+DETECT=$(printf '%s' "$COMMAND" | sed 's/\\//g; s/"//g; s/'"'"'//g')
+
 # Global git flags before 'push' (-c/-C/--git-dir/…) can dodge the plain
 # 'git push' detection below and retarget the repo or config — never sanctioned.
-if printf '%s' "$COMMAND" | grep -qE 'git([[:space:]]+-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*){0,2})+[[:space:]]+push([[:space:]]|$)'; then
+if printf '%s' "$DETECT" | grep -qE 'git([[:space:]]+-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*){0,2})+[[:space:]]+push([[:space:]]|$)'; then
   echo "BLOCKED: git global flags before 'push' are not allowed. Loop pushes are exactly 'git push [-u] origin agent/<branch>' — nothing else. The human pushes everything else." >&2
   exit 2
 fi
 
 # Only push commands concern this guard.
-printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+push' || exit 0
+printf '%s' "$DETECT" | grep -qE 'git[[:space:]]+push' || exit 0
 
 block() { echo "BLOCKED: $1 Loop pushes are exactly 'git push [-u] origin agent/<branch>' — nothing else. The human pushes everything else." >&2; exit 2; }
 
 # Never any force/delete/mass flavor, anywhere in the command.
-printf '%s' "$COMMAND" | grep -qE -- '--force|--force-with-lease|(^|[[:space:]])-f([[:space:]]|$)|--delete|(^|[[:space:]])-d([[:space:]]|$)|--mirror|--all|--tags|--prune' \
+printf '%s' "$DETECT" | grep -qE -- '--force|--force-with-lease|(^|[[:space:]])-f([[:space:]]|$)|--delete|(^|[[:space:]])-d([[:space:]]|$)|--mirror|--all|--tags|--prune' \
   && block "force/delete/mass push flags are never allowed."
 
 # Refspecs with a colon (src:dst) can retarget protected refs.
-printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+push[^|&;]*[^-][[:space:]][^[:space:]]*:' \
+printf '%s' "$DETECT" | grep -qE 'git[[:space:]]+push[^|&;]*[^-][[:space:]][^[:space:]]*:' \
   && block "explicit refspecs (src:dst) are not allowed."
 
 # Extract the first `git push …` segment (stop at chaining operators).
-SEG=$(printf '%s' "$COMMAND" | grep -oE 'git[[:space:]]+push[^|&;]*' | head -1)
+SEG=$(printf '%s' "$DETECT" | grep -oE 'git[[:space:]]+push[^|&;]*' | head -1)
 
 # Strip flags; expect exactly: remote 'origin' + one agent/* branch.
 set -- $SEG                      # $1=git $2=push $3...

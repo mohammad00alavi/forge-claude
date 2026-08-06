@@ -341,3 +341,9 @@ issue. Agents may DRAFT issues (labelled `needs-triage`); only the human's
   repo whose toggle they honor — a `-R`/`--repo` naming any other repo is
   blocked (consumer edition resolves its repo from the remote and fails closed
   when it can't). Guard behavior tests 42 → 64 cases, all green.
+- **Review hardening, round 3 (PR #7, Copilot):** all five guards now normalize
+  the command before every check — backslashes and quotes stripped — so
+  shell-quoting evasions (escaped whitespace, quote-splitting) can't dodge
+  detection. `$VAR`/`eval` indirection is documented as beyond a string guard's
+  reach; the ask-gate, branch protection, and human review back that residual.
+  Guard behavior tests 64 → 77 cases, all green.

@@ -18,14 +18,20 @@ fi
 
 [ -z "$COMMAND" ] && exit 0
 
+# Shell-quoting evasion (gh\ pr\ merge, "gh" "pr" "merge" …): run every check
+# against a normalized copy with backslashes and quotes stripped. $VAR/eval
+# indirection is beyond a string guard — branch protection and human review
+# back this wall.
+DETECT=$(printf '%s' "$COMMAND" | sed 's/\\//g; s/"//g; s/'"'"'//g')
+
 # Only merge commands concern this guard.
-printf '%s' "$COMMAND" | grep -qE 'gh[[:space:]]+pr[[:space:]]+merge' || exit 0
+printf '%s' "$DETECT" | grep -qE 'gh[[:space:]]+pr[[:space:]]+merge' || exit 0
 
 # Disarming is always allowed (it's how /automerge off cleans up).
-printf '%s' "$COMMAND" | grep -q -- '--disable-auto' && exit 0
+printf '%s' "$DETECT" | grep -q -- '--disable-auto' && exit 0
 
 # Bypassing branch protections is never allowed, toggle regardless.
-if printf '%s' "$COMMAND" | grep -q -- '--admin'; then
+if printf '%s' "$DETECT" | grep -q -- '--admin'; then
   echo "BLOCKED: 'gh pr merge --admin' bypasses protections. Agents never use --admin. Drop the flag or leave the PR for the human." >&2
   exit 2
 fi
@@ -33,11 +39,11 @@ fi
 # The contract's merge mode is exactly --squash --delete-branch; merge commits,
 # rebases, and kept branches are never sanctioned (checked before the toggle so
 # a wrong mode is blocked deterministically, even offline).
-if printf '%s' "$COMMAND" | grep -qE -- '--merge|--rebase'; then
+if printf '%s' "$DETECT" | grep -qE -- '--merge|--rebase'; then
   echo "BLOCKED: the contract merge mode is --squash (never --merge/--rebase). Use 'gh pr merge <N> --squash --delete-branch' or leave the PR for the human." >&2
   exit 2
 fi
-if ! printf '%s' "$COMMAND" | grep -q -- '--squash' || ! printf '%s' "$COMMAND" | grep -q -- '--delete-branch'; then
+if ! printf '%s' "$DETECT" | grep -q -- '--squash' || ! printf '%s' "$DETECT" | grep -q -- '--delete-branch'; then
   echo "BLOCKED: the contract merge is exactly 'gh pr merge <N> --squash --delete-branch' — both flags required." >&2
   exit 2
 fi
@@ -47,7 +53,7 @@ REPO="mohammad00alavi/forge-claude"
 # The merge must target THIS repo: the toggle read below is forge-claude's, so a
 # -R/--repo pointing anywhere else is never sanctioned (checked before the
 # toggle so cross-repo attempts are blocked deterministically, even offline).
-TARGET=$(printf '%s' "$COMMAND" | sed -nE 's/.*(--repo|-R)[[:space:]=]*([^[:space:]]+).*/\2/p' | head -1)
+TARGET=$(printf '%s' "$DETECT" | sed -nE 's/.*(--repo|-R)[[:space:]=]*([^[:space:]]+).*/\2/p' | head -1)
 if [ -n "$TARGET" ] && [ "$TARGET" != "$REPO" ]; then
   echo "BLOCKED: this merge targets '$TARGET' but the toggle being honored is $REPO's. Cross-repo merges are never sanctioned — drop the flag or leave that PR for its own human." >&2
   exit 2

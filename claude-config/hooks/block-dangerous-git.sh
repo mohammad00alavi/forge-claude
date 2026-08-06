@@ -27,6 +27,12 @@ fi
 
 [ -z "$COMMAND" ] && exit 0
 
+# Shell-quoting evasion (gh\ pr\ merge, "git" "push", g'i't …): run every check
+# against a normalized copy with backslashes and quotes stripped. $VAR/eval
+# indirection is beyond a string guard — the ask-gate, branch protection, and
+# human review back this wall.
+DETECT=$(printf '%s' "$COMMAND" | sed 's/\\//g; s/"//g; s/'"'"'//g')
+
 # Operations Forge walls off (the human does these, or they're destructive):
 DANGEROUS_PATTERNS=(
   "push --force"
@@ -39,7 +45,7 @@ DANGEROUS_PATTERNS=(
 )
 
 for pattern in "${DANGEROUS_PATTERNS[@]}"; do
-  if printf '%s' "$COMMAND" | grep -qE "$pattern"; then
+  if printf '%s' "$DETECT" | grep -qE "$pattern"; then
     echo "BLOCKED: '$COMMAND' matches walled git operation '$pattern'. In Forge, agents commit locally and open PRs, but the human pushes/merges after reviewing locally. You do not have authority to run this — prepare it locally and surface it instead." >&2
     exit 2
   fi
@@ -52,24 +58,24 @@ done
 #
 # Global git flags before 'push' (-c/-C/--git-dir/…) can dodge the plain
 # 'git push' detection and retarget the repo or config — never sanctioned.
-if printf '%s' "$COMMAND" | grep -qE 'git([[:space:]]+-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*){0,2})+[[:space:]]+push([[:space:]]|$)'; then
+if printf '%s' "$DETECT" | grep -qE 'git([[:space:]]+-[^[:space:]]+([[:space:]]+[^-[:space:]][^[:space:]]*){0,2})+[[:space:]]+push([[:space:]]|$)'; then
   echo "BLOCKED: '$COMMAND' uses git global flags before 'push'. The only sanctioned push is plain 'git push [-u] origin agent/<branch>' — no -c/-C/--git-dir/other global flags." >&2
   exit 2
 fi
-if printf '%s' "$COMMAND" | grep -qE 'git[[:space:]]+push'; then
+if printf '%s' "$DETECT" | grep -qE 'git[[:space:]]+push'; then
   while IFS= read -r seg; do
     if ! printf '%s' "$seg" | grep -qE '^git[[:space:]]+push[[:space:]]+((-u|--set-upstream)[[:space:]]+)?origin[[:space:]]+agent/[^:[:space:]]+[[:space:]]*$'; then
       echo "BLOCKED: '$COMMAND' pushes outside the loop scope. Agents may run exactly 'git push [-u] origin agent/<branch>' (the forge-loop publishing its PR branch); the human pushes everything else after local review." >&2
       exit 2
     fi
-  done < <(printf '%s' "$COMMAND" | grep -oE 'git[[:space:]]+push[^|&;]*')
+  done < <(printf '%s' "$DETECT" | grep -oE 'git[[:space:]]+push[^|&;]*')
 fi
 
 # Settings lockdown — block shell writes to .claude/settings.json. Edit/Write are
 # denied for it, but Bash(*) could still rewrite it, so close that here. Matches a
 # redirect / sed -i / tee|cp|mv|dd|install|truncate|ln that TARGETS the file (reads
 # like `cat .claude/settings.json` stay allowed).
-if printf '%s' "$COMMAND" | grep -qE '(>>?[[:space:]]*[^ |&;]*\.claude/settings\.json|sed[[:space:]]+-i[^|&;]*\.claude/settings\.json|(tee|cp|mv|dd|install|truncate|ln)[[:space:]][^|&;]*\.claude/settings\.json)'; then
+if printf '%s' "$DETECT" | grep -qE '(>>?[[:space:]]*[^ |&;]*\.claude/settings\.json|sed[[:space:]]+-i[^|&;]*\.claude/settings\.json|(tee|cp|mv|dd|install|truncate|ln)[[:space:]][^|&;]*\.claude/settings\.json)'; then
   echo "BLOCKED: '$COMMAND' looks like a shell write to .claude/settings.json — that file holds Forge's safety walls and is human-only. Edit it by hand, never via an agent." >&2
   exit 2
 fi
