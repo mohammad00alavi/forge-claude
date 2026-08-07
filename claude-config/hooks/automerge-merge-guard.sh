@@ -94,6 +94,11 @@ hasw gh && hasw review && has '(dismiss|approve|request-changes)' \
   && block "'$COMMAND' dismisses or submits a PR review verdict. Reviews belong to the reviewer — address the feedback and ask for the review to be updated."
 has 'pulls/[^[:space:]]*/reviews' \
   && block "'$COMMAND' targets the PR reviews API. Review verdicts are the reviewer's — an agent never clears or grants its own approval."
+# Same rule in GraphQL: addPullRequestReview submits a review and can carry
+# event: APPROVE. The trailing class keeps addPullRequestReviewThreadReply —
+# answering a thread — allowed, since replying is the loop's actual job.
+has '(addPullRequestReview([^A-Za-z]|$)|submitPullRequestReview|dismissPullRequestReview)' \
+  && block "'$COMMAND' submits or dismisses a PR review via GraphQL. Review verdicts are the reviewer's — reply to the thread and ask for the review to be updated instead."
 
 # gh aliases rename any subcommand, so an alias can spell a merge with none of
 # the words this guard looks for. Same reasoning as git's `alias.` wall.
@@ -117,7 +122,7 @@ FIELDFLAG='(^|[[:space:]])(-[fF]|--(field|raw-field|input))'
 is_loop_thread_mutation() {
   has 'mutation' || return 1
   has '(mergePullRequest|enablePullRequestAutoMerge|createRef|updateRef|deleteRef|updateBranchProtection|deleteBranchProtection)' && return 1
-  has '(resolveReviewThread|unresolveReviewThread|addPullRequestReviewThreadReply|addPullRequestReview|addComment)'
+  has '(resolveReviewThread|unresolveReviewThread|addPullRequestReviewThreadReply|addComment)'
 }
 is_read_graphql() {
   printf '%s' "$DETECT" \

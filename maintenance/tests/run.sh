@@ -101,6 +101,21 @@ for g in "$CONSUMER" "$MAINTAINER" "$GITGUARD"; do
   run fresh-approval "$g" 2 "gh pr review --approve"     "gh pr review 42 --approve -R $REPO"
   run fresh-approval "$g" 2 "review dismissal via REST"  "gh api -X PUT repos/$REPO/pulls/42/reviews/1/dismissals -f message=x"
 done
+# GraphQL is a third spelling of the same act. The boundary matters: submitting
+# a review is refused, but REPLYING to a thread is the loop's actual job, and
+# addPullRequestReviewThreadReply contains addPullRequestReview as a substring.
+for g in "$CONSUMER" "$MAINTAINER"; do
+  run fresh-approval "$g" 2 "graphql addPullRequestReview (can carry event: APPROVE)" \
+    'gh api graphql -f query=mutation{addPullRequestReview(input:{pullRequestId:1,event:APPROVE}){clientMutationId}}'
+  run fresh-approval "$g" 2 "graphql submitPullRequestReview" \
+    'gh api graphql -f query=mutation{submitPullRequestReview(input:{pullRequestReviewId:1,event:APPROVE}){clientMutationId}}'
+  run fresh-approval "$g" 2 "graphql dismissPullRequestReview" \
+    'gh api graphql -f query=mutation{dismissPullRequestReview(input:{pullRequestReviewId:1,message:x}){clientMutationId}}'
+  run fresh-approval "$g" 0 "graphql thread REPLY still allowed" \
+    'gh api graphql -f query=mutation{addPullRequestReviewThreadReply(input:{body:fixed}){clientMutationId}}'
+  run fresh-approval "$g" 0 "graphql resolveReviewThread still allowed" \
+    'gh api graphql -f query=mutation{resolveReviewThread(input:{threadId:abc}){thread{isResolved}}}'
+done
 
 echo
 if [ "$fail" = 0 ]; then echo "guard tests: OK ($pass cases)"; else echo "guard tests: $fail FAILED of $((pass+fail))"; fi

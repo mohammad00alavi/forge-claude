@@ -509,3 +509,18 @@ issue. Agents may DRAFT issues (labelled `needs-triage`); only the human's
   alternation, and the committed suite gained 11 cases covering each glob
   spelling — `.claude/set*.json`, `.cla*/set*.json`, `.cla?ude/…`, `//` and
   `/./` — plus the reads that must still pass. Suite 31 → 42 cases.
+
+- **The self-approval wall had a hole I put there myself (2026-08-07, review
+  follow-up).** When the loop's thread-resolution mutations were carved out of
+  the merge-capable check, `addPullRequestReview` was carved out with them — but
+  that mutation SUBMITS a review and can carry `event: APPROVE`. So the CLI
+  (`gh pr review --approve`) and REST (`pulls/<n>/reviews`) spellings were
+  refused while the GraphQL one was waved through, and an agent could have
+  approved its own PR and satisfied the very approval gate added a day earlier.
+  It is dropped from the carve-out and now blocked explicitly, along with
+  `submitPullRequestReview` and `dismissPullRequestReview`. The boundary is the
+  delicate part: `addPullRequestReviewThreadReply` — replying to a thread, which
+  is the loop's actual job — contains `addPullRequestReview` as a substring, so
+  the pattern requires a non-letter after it. Committed suite 42 → 52 cases,
+  pinning both sides: the three submission spellings refused, reply and
+  resolveReviewThread still allowed.
