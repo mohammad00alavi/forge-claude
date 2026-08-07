@@ -260,3 +260,336 @@ confirmed patterns, ship on human approval. Everything lives in `maintenance/`
   needs ANTHROPIC_API_KEY, opens a PR). Copy to `.github/workflows/` to enable.
 - Anti-thrash by design: acts only on patterns seen ≥2× / a `↑↑` learning / an
   eval regression, ≤2 edits per run, with a cool-down on recently-touched files.
+
+## 2026-08-04 — /automerge toggle (Option A, opt-in agent merge)
+
+Design record: `docs/design/automerge/`. One human-set switch, both modes work:
+OFF (default) = agents stop at a ready PR, the human merges — unchanged Forge
+behavior. ON = agents may squash-merge THEIR OWN PRs, only under the merge-step
+contract: review threads resolved (bots incl.), CI green, behind-zero via
+`gh pr update-branch`, fresh gate, no `human:*`/`automerge:halt`, no protected
+paths, never `--admin`.
+
+- **Repo (maintainer):** `maintenance/automerge.command.md`,
+  `maintenance/forge-loop-merge-step.md` (the contract),
+  `maintenance/automerge-merge-guard.sh` (PreToolUse wall: variable + fresh
+  `forge-lint`, fail-closed).
+- **Installs (shipped):** `claude-config/commands/automerge.md`,
+  `claude-config/hooks/automerge-merge-guard.sh`, wired in
+  `claude-config/settings.json`. Also closes a pre-existing gap: `gh pr merge`
+  was walled by neither the deny list nor `block-dangerous-git.sh`; it is now
+  fail-closed behind the toggle in every install.
+
+## 2026-08-04 — Forge loop, forge-loop-ready (maintainer-only)
+
+The repo's standing loop, lean edition: queue = GitHub issues labelled
+`forge-loop-ready` (maintainer-applied — the injection guardrail); one iteration =
+return path first (threads/CI/behind on open agent PRs), then one issue →
+`agent/gh-<N>` worktree → maker (fixer/builder) → gate (`forge-lint` + affected
+eval suite vs BASELINE) → fresh-context verifier → ready PR `Closes #N` →
+toggle-aware merge step. Maker ≠ checker; the gate decides done.
+
+- `maintenance/forge-loop.md` (playbook + one-time activation runbook),
+  `maintenance/LOOP-STATE.md` (caps · escalate · roles · stop condition ·
+  lessons), `maintenance/forge-loop.command.md` (optional `/forge-loop`).
+- `maintenance/loop-push-guard.sh` — Wall 1's loop exception made mechanical:
+  `git push` only as `git push [-u] origin agent/<branch>`; force/delete/tags/
+  refspecs/non-origin all blocked (12-case behavior test in-repo).
+- `docs/agents/{issue-tracker,triage-labels,domain}.md` — config trio for
+  issue-shaping skills: GitHub tracker, `ready-for-agent`==`forge-loop-ready` bridge,
+  domain-doc map.
+- Deliberately NOT ported from the reference implementation: merge queue,
+  scope/rate breakers, scheduled daemon workflows, verdict panel — volume
+  machinery a one-maintainer repo doesn't need yet (see docs/design/automerge/
+  option C for the record).
+
+## 2026-08-04 — Consumer forge loop: the dev loop ships to every install
+
+The loop is no longer maintainer-only — consumers get the full cycle in their
+own projects: human labels issues `forge-loop-ready` → `/forge-loop` builds each
+in an `agent/gh-<N>` worktree via a maker sub-agent → the PROJECT's own gate
+(package.json scripts / STATE Gates / asked once, recorded) → fresh-context
+verifier → ready PR `Closes #N` → toggle-aware merge step (`/automerge`) → next
+issue. Agents may DRAFT issues (labelled `needs-triage`); only the human's
+`forge-loop-ready` label queues work — the injection guardrail, unchanged.
+
+- **Shipped:** `claude-config/commands/forge-loop.md` (the loop, repo resolved
+  from the git remote, conventions + issue template embedded; per-project state
+  in `.claude/loop/LOOP-STATE.md`), `claude-config/hooks/loop-push-guard.sh`,
+  both wired in `claude-config/settings.json`. Evals: `forge-loop` suite
+  (9 cases), BASELINE 14/14 commands, 89 cases.
+- **PUSH WALL, v3.9.5 model:** the blanket push deny moved into the hooks so the
+  loop can publish PR branches — `block-dangerous-git.sh` now blocks every push
+  whose segments aren't exactly the sanctioned
+  `git push [-u] origin agent/<branch>` shape, and `loop-push-guard.sh`
+  validates it strictly (no force/delete/refspecs/tags/other remotes). 25-case
+  behavior test green across both guards. Merge stays fail-closed behind
+  `/automerge on`; force-push/merge/deploy stay denied in settings;
+  `forge-lint` check 4 now asserts the new wall (force-push deny + all three
+  guards wired) instead of the old blanket deny.
+- **Review hardening (PR #7, Copilot):** both merge-guard editions now enforce
+  the exact contract mode — `--squash --delete-branch` required, `--merge`/
+  `--rebase` blocked, checked before the toggle so wrong modes fail even
+  offline; the maintainer guard's fresh gate runs against the session's
+  worktree (not the repo root) when merging from one; the push-scope regex
+  forbids `:` so an `agent/<src>:<dst>` refspec can't retarget a protected
+  ref. Guard behavior tests 25 → 42 cases, all green.
+- **Review hardening, round 2 (PR #7, Copilot):** (a) all three push guards now
+  block `git <global-flags> push` forms (`-c`/`-C`/`--git-dir`/…) that dodged
+  the plain `git push` detection and could retarget the repo or config; the
+  sanctioned shape is plain-only. (b) Both merge guards pin the merge to the
+  repo whose toggle they honor — a `-R`/`--repo` naming any other repo is
+  blocked (consumer edition resolves its repo from the remote and fails closed
+  when it can't). Guard behavior tests 42 → 64 cases, all green.
+- **Review hardening, round 3 (PR #7, Copilot):** all five guards now normalize
+  the command before every check — backslashes and quotes stripped — so
+  shell-quoting evasions (escaped whitespace, quote-splitting) can't dodge
+  detection. `$VAR`/`eval` indirection is documented as beyond a string guard's
+  reach; the ask-gate, branch protection, and human review back that residual.
+  Guard behavior tests 64 → 77 cases, all green.
+- **Review hardening, round 4 (PR #7, Copilot):** both merge guards now enforce
+  the contract's own-PR scope mechanically — the merge must name an explicit PR
+  number (bare/URL/branch targets blocked), and that PR's head ref must be an
+  `agent/*` branch (looked up fresh; unreadable == fail closed). A human-
+  authored PR can no longer be merged by an agent even with the toggle armed.
+  Guard behavior tests 77 → 83 cases, all green.
+
+- **Guards rebuilt as whitelists after four adversarial review rounds
+  (2026-08-06).** Rounds of a three-lens panel (bypass / bash-semantics /
+  contract-consistency, each finding proven by executing the hook) showed that
+  every attempt to FILTER an arbitrary shell command leaks: redirect tokens
+  ended argument parsing (`git push origin agent/x >/dev/null main` really
+  pushed main), wrapper prefixes and shell grammar hid the verb, `grep`'s
+  line-orientation let a sanctioned first line launder a second, and gh/git
+  accept flags in positions no pattern anticipated. The model is now:
+  - **Whitelist the exception, refuse everything else.** A command that could
+    publish must match `[cd <path> && ] git push [-u] origin agent/<branch>`
+    exactly; one that could merge must match `gh pr merge <N> --squash
+    --delete-branch -R <repo literal>` (or the `--disable-auto` disarm).
+  - **Position-free deny** for destructive git/gh ops, so wrapper prefixes,
+    global flags and alias injection cannot hide the verb.
+  - **Fold to one line** before matching; split the `.claude/` walk on newlines.
+  - **The toggle is human-only**: `gh variable/secret` writes and the
+    `actions/variables` API route are refused, so an agent cannot arm the gate
+    it is judged by. The maintainer gate root must share this repo's git object
+    store, so a crafted directory cannot supply a fake `forge-lint`.
+  - The loop keeps working: its read-only `gh api graphql` query and its
+    review-thread mutations (`resolveReviewThread` and friends) are carved out
+    by name; merge/ref mutations are not.
+  Deliberate over-blocking is documented in each header — a command that merely
+  MENTIONS a walled word is refused, because a false refusal costs a rephrase
+  and a false allow costs the wall. 438 behavior cases green, including an
+  ARMED harness (fake `gh`, `LOOP_AUTOMERGE=true`) that proves the sanctioned
+  merge is still allowed rather than everything simply blocking.
+  **Known limit — read this before trusting the hook:** a PreToolUse string
+  guard cannot be a perimeter against an adversarial agent. Shell expansion
+  ($VAR, eval, command substitution, globs, file-backed API bodies) is resolved
+  after the hook runs, and the review rounds kept finding new spellings rather
+  than converging. Treat these guards as accident-prevention and a speed bump;
+  the real wall is server-side — branch protection (required reviews and
+  checks, no force-push, restricted merge rights), which an agent's token
+  cannot edit, plus the human's own review.
+
+- **Consumer loop runs the whole queue, and false positives fixed (2026-08-06).**
+  Two changes so the consumer story actually works end to end:
+  - `/forge-loop` no longer stops after one issue. It cycles — re-reading state
+    from GitHub each pass — shepherding open PRs to landable (review threads
+    incl. bots, red CI read from the failing job log, behind-zero via
+    `gh pr update-branch`) and taking the next issue, until the queue is done,
+    a cap is hit, a human is needed, or a cycle makes no progress; it then
+    reports what merged, what waits and why. It also accepts explicit issue
+    numbers (`/forge-loop 12 13`) — **the human naming issues is the
+    authorization**, which is the flow for "draft these issues, now go fix
+    them"; the `forge-loop-ready` label remains the no-argument queue, and an
+    agent still never selects or widens its own scope. Evals 9 → 12 cases
+    (+H4 continuous run, +H5 explicit scope, +E4 no-progress stop).
+  - The guards were over-blocking ordinary work: 5 of 27 realistic consumer
+    commands were refused, including `git commit -m "fix: resolve merge
+    conflict"` and `gh pr create --title "fix: merge conflict handling"` —
+    which a dev loop produces constantly, so the loop would have jammed within
+    minutes. Keyword checks now ignore the VALUES of unambiguous message flags
+    (`-m`/`--message`/`--title`/`--body`/`--body-file`/`--description`/
+    `--notes`), while the anchored whitelists still match the untouched
+    command, so the sanctioned shapes stay exact. `-B`/`-C` is only a
+    branch-force signal in checkout/switch/branch context, so the global
+    `git -C <dir>` flag works again. Re-measured: **0 of 27 realistic commands
+    blocked, 18 of 18 attacks still blocked**, 438 guard cases green.
+
+- **The merge contract is now a wall, not prose (2026-08-06).** The shipped
+  guard verified shape, literal repo, toggle and `agent/*` head ref, then left
+  "CI green" and the rest as the agent's obligation — its own closing comment
+  said so. On a consumer repo with workflows but **no branch protection**,
+  `gh pr merge` succeeds regardless of check status, so green-before-merge was
+  an instruction an agent could simply not follow. Both guard editions now read
+  the PR's real state from GitHub before letting the merge through and refuse
+  unless: every check has CONCLUDED green (queued/running counts as not green),
+  no `human:*`/`automerge:halt` label is on the PR and no open `automerge:halt`
+  issue exists, the diff touches no protected path (`.github/`, `.claude/`,
+  `.env*`, auth/payments/billing/secrets, infra, containers, `*.tf`), the PR is
+  open, not BEHIND and not conflicted, and no review thread is unresolved
+  (bots included). Unreadable state — or a missing `jq` — fails closed. A repo
+  with no CI configured still merges, since there is nothing to be green.
+  Evals: /automerge 9 → 11 (+E4 red/pending CI, +E5 the other conditions);
+  new 26-case contract harness drives each condition through a fake `gh`.
+
+- **Review is now required to exist, and a rejection can't be merged over
+  (2026-08-06).** Two related holes: (1) nothing shipped a reviewer, so on a
+  repo with no review bot and nobody watching, "review requested" was a request
+  to nobody — and zero reviews meant zero threads, which the contract read as
+  "feedback resolved"; (2) no approval check existed anywhere, so a human who
+  requested changes with only a review SUMMARY (no inline comment) created no
+  thread, and the merge would have gone through over an explicit rejection.
+  Now, in both guard editions:
+  - `reviewDecision` is read from the PR. `CHANGES_REQUESTED` is a hard block,
+    thread list irrelevant.
+  - An APPROVED decision is required by default — GitHub forbids self-approval,
+    so an approval necessarily came from someone else. A project with no
+    reviewer opts out **deliberately** with `LOOP_REQUIRE_APPROVAL=false`,
+    which makes the loop's fresh-context verifier and CI the entire gate; unset
+    means required, so the safe state is the default.
+  - An agent can no longer grant or clear its own verdict: `gh pr review
+    --approve`, `--request-changes`, review dismissal, and the
+    `pulls/<n>/reviews` REST routes are all refused.
+  `/automerge on` now settles the review policy with the human as a setup step
+  (does a reviewer exist? if not, choose verifier-only or leave merging to a
+  human) and `/automerge` status reports which policy is in force. `/forge-loop`
+  requests review from someone who actually exists — bot, CODEOWNERS, or named
+  reviewers — says so plainly in the run report when the repo has none, posts
+  the verifier's verdict on the PR for auditability, and reads `reviewDecision`
+  on the return path instead of trusting an empty thread list.
+  Evals: /automerge 11 → 14 (+E6 changes-requested with no thread, +E7 no
+  reviewer at all, +A4 self-approval/dismissal); contract harness 26 → 34 cases.
+
+- **Approvals are bound to the head commit (2026-08-06).** Requiring
+  `reviewDecision == APPROVED` was not enough: GitHub keeps that decision at
+  APPROVED after new commits are pushed, unless the repo enables "dismiss stale
+  approvals" branch protection — which most consumer repos do not. So a
+  reviewer could approve commit `aaa`, the loop's own return path could push
+  `bbb`/`ccc` (a CI fix, a thread fix, or the merge commit `gh pr update-branch`
+  creates), and the guard would still read APPROVED and merge code nobody
+  reviewed. Both guard editions now fetch `headRefOid` alongside the rest of the
+  PR state and query approving reviews with the commit each was submitted
+  against; the merge passes only if some APPROVED review's `commit.oid` equals
+  the current head. A stale-only approval blocks with both short oids and the
+  recovery path (re-request review — never dismiss or self-approve). Unreadable
+  reviews fail closed. `CHANGES_REQUESTED` still hard-blocks regardless, and
+  `LOOP_REQUIRE_APPROVAL=false` still bypasses the approval requirement
+  entirely, so freshness is moot on that path.
+  - **Ordering rule, or the loop flaps:** any push after approval invalidates
+    it, `gh pr update-branch` included. The loop docs (consumer command,
+    maintainer playbook, merge-step contract) now teach approve-LAST — threads
+    → CI → behind-zero → gate → *then* request review on the final head — and
+    state that a stale approval means re-request, not malfunction. Reports and
+    `/automerge` status distinguish "approved (current head)" from "approved
+    (stale — re-request)", since GitHub's UI shows both identically.
+  - `/automerge on` now also recommends enabling "dismiss stale pull request
+    approvals" where the human controls branch protection: the server-side twin
+    of this check, and one an agent's token cannot switch off.
+  - **Tests now ship with the change.** Earlier guard work was validated by a
+    session-local harness that never landed, so its results were not
+    reproducible. `maintenance/tests/` adds an offline runner and a fake `gh`
+    shim serving per-fixture JSON; 31 cases drive both guard editions through
+    fresh/stale/opt-out/rejection/unreadable states, prove the legitimate
+    commands (`gh pr edit --add-reviewer`, `gh pr comment`, `gh pr view --json`)
+    still pass, and prove an agent still cannot approve or dismiss. Maintainer
+    -only — nothing is wired into `install.sh`. Evals /automerge 14 → 16
+    (+E8 stale approval, +H4 approve-last ordering).
+
+- **A broken wall pattern now refuses instead of going quiet (2026-08-06,
+  review follow-up).** `grep` exits 0 on match, 1 on no-match and >1 on a regex
+  ERROR — and the guards' `has`/`hasw` helpers read anything non-zero as "no
+  match". So a typo in any pattern would have switched that wall off silently,
+  with no failing test and no error anyone would see. The helpers now
+  distinguish the three cases and refuse the command when a pattern cannot
+  compile, so a guard bug fails closed rather than open. Verified by injecting
+  an uncompilable pattern into a copy of the guard: the command is blocked with
+  an explicit "wall pattern failed to compile" message. The `.claude/` glob
+  detection that prompted this (flagged in review for its `[*?[]` bracket
+  expression, which is valid ERE but easy to get wrong) is rewritten as plain
+  alternation, and the committed suite gained 11 cases covering each glob
+  spelling — `.claude/set*.json`, `.cla*/set*.json`, `.cla?ude/…`, `//` and
+  `/./` — plus the reads that must still pass. Suite 31 → 42 cases.
+
+- **The self-approval wall had a hole I put there myself (2026-08-07, review
+  follow-up).** When the loop's thread-resolution mutations were carved out of
+  the merge-capable check, `addPullRequestReview` was carved out with them — but
+  that mutation SUBMITS a review and can carry `event: APPROVE`. So the CLI
+  (`gh pr review --approve`) and REST (`pulls/<n>/reviews`) spellings were
+  refused while the GraphQL one was waved through, and an agent could have
+  approved its own PR and satisfied the very approval gate added a day earlier.
+  It is dropped from the carve-out and now blocked explicitly, along with
+  `submitPullRequestReview` and `dismissPullRequestReview`. The boundary is the
+  delicate part: `addPullRequestReviewThreadReply` — replying to a thread, which
+  is the loop's actual job — contains `addPullRequestReview` as a substring, so
+  the pattern requires a non-letter after it. Committed suite 42 → 52 cases,
+  pinning both sides: the three submission spellings refused, reply and
+  resolveReviewThread still allowed.
+
+- **The maintainer escalate list was a promise, not a wall (2026-08-07, review
+  follow-up).** The merge-step contract §4 says PRs touching this repo's
+  machinery — `claude-config/hooks/**`, `claude-config/settings.json`,
+  `install.sh`, `maintenance/forge-lint.sh`, `maintenance/release-gate.sh`,
+  `maintenance/automerge-merge-guard.sh`, any `*.workflow.yml` — are always
+  human-merged. The maintainer guard, however, was carrying the SHIPPED guard's
+  generic path list (CI config, secrets, infra), which names none of them: an
+  agent could have auto-merged a PR rewriting the very guard judging it. The
+  maintainer guard now enforces the machinery set explicitly, and it is wider
+  than the contract text was: the push guard and `maintenance/tests/` (weaken
+  the tests and the walls follow), `claude-config/evals/BASELINE.md` and the
+  five-walls reference and `maintenance/LOOP-STATE.md` (what the machinery is
+  judged by — previously listed only in LOOP-STATE, enforced nowhere). The
+  contract and LOOP-STATE now point at one list instead of two, and the guard
+  carries a comment tying itself to them. Committed suite 52 → 65 cases: each
+  of the twelve paths blocked independently, plus an ordinary
+  machinery-adjacent file (`claude-config/agents/builder.md`) that must still
+  merge, so the wall is not simply "block everything".
+
+- **Doc/wall parity audit — the promises that had no walls (2026-08-07).** Two
+  escalate-path divergences in two days made the class worth hunting
+  deliberately, so a three-lens audit walked every documented condition and
+  asked what actually enforces it, proving each answer by running the guards.
+  Defeat paths found and closed:
+  - **The walls were editable.** `Edit`/`Write` were denied only for
+    `.claude/settings.json`, and the PreToolUse hooks match `Bash` only — so one
+    `Edit` turning a guard's `exit 2` into `exit 0` removed a wall, unseen by
+    every hook. `.claude/**` and `.github/**` are now denied for both tools.
+  - **The emergency stop could be lifted by the agent it stopped.** The merge
+    guard reads `automerge:halt` / `human:*`, but nothing refused
+    `gh pr edit --remove-label` or closing the halt issue. Both are now walled,
+    as is applying `forge-loop-ready` — the queue's authorization label, and the
+    exact counterpart of the toggle the guards already protect hardest.
+    **Authority moves one way.** The first cut of this wall also refused
+    *adding* a `human:*` label, which deadlocked the loop's own documented exits:
+    propose-and-defer and the escalate rule both require it to apply
+    `human:decide`/`human:authorize`, so the first oversized issue or escalate
+    path would have hit a guard-blocked exit route. Adding one hands the decision
+    to the human and grants the agent nothing, so it is allowed; removing one, or
+    self-applying `forge-loop-ready`, takes authority and stays refused. Both
+    directions are pinned in the suite.
+  - **The maintainer gate could run on the wrong code.** Sharing a git object
+    store makes a directory *a* checkout of this repo, not *this PR's* checkout,
+    so `forge-lint` green anywhere counted. The gate now requires `ROOT`'s HEAD
+    to equal the PR head.
+  - **`forge-lint`'s "walls intact" check passed on prose.** Every guard
+    filename also appears in `permissions._comment`, so a whole-file grep could
+    not see whether the hooks were wired at all. It now asserts the real
+    `hooks.PreToolUse` structure with jq and that each hook exists on disk —
+    verified by unwiring a hook and watching the check go red.
+  - **The test suite was partly vacuous.** The fake `gh` hard-coded CI, labels,
+    threads, behind-state and the toggle, so those walls had no test that could
+    fail. Every field is now fixture-driven; proved by mutation — disabling the
+    CI wall in a copy of the guard now turns the suite red, where before it
+    stayed green.
+  - **Lockstep is now a gate.** A test reads the escalate paths out of the
+    contract and runs the guard against each, so adding a path to the doc
+    without adding it to the wall fails the suite (verified by adding a fake
+    path and watching it fail).
+  Doc corrections where the code was right and the prose was not: `/automerge`
+  no longer claims the hook enforces the project gate (no shipped hook can know
+  a venture's gate commands — CI is the mechanical signal, step 4 is the
+  agent's); `/automerge on|off` now prints the toggle command for the human
+  instead of running it, since the guards refuse it from an agent by design and
+  the documented path could not execute; the disarm is spelled in the only shape
+  the whitelist accepts; the shipped hooks no longer cite a settings "ask-gate"
+  that v3.9.5 removed; and LOOP-STATE's caps are labelled advisory, because the
+  guard is stateless and counts nothing. Committed suite 65 → 104 cases.

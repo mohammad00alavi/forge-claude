@@ -22,6 +22,26 @@ self-review is for the maintainer only.
   markers agree + eval baseline established + tag free). `maintenance/release-gate.sh 3.9`.
 - **`forge-release.workflow.yml`** — the tag-on-demand release Action. Install:
   `cp maintenance/forge-release.workflow.yml .github/workflows/forge-release.yml`.
+- **`automerge.command.md`** — optional `/automerge` toggle for THIS repo (design:
+  `docs/design/automerge/`, Option A). Off = agents stop at a ready PR (default);
+  on = they may squash-merge under the merge-step contract. Install:
+  `cp maintenance/automerge.command.md .claude/commands/automerge.md`.
+- **`forge-loop-merge-step.md`** — the contract an agent-performed merge must satisfy
+  (threads resolved incl. bots · CI green · behind-zero via `gh pr update-branch` ·
+  fresh lint · no `human:*`/`automerge:halt` · no escalate paths).
+- **`automerge-merge-guard.sh`** — PreToolUse hook walling `gh pr merge` behind the
+  human-set `LOOP_AUTOMERGE` repo variable + a fresh `forge-lint` pass; blocks
+  `--admin` always; fail-closed when the variable is unreadable.
+- **`forge-loop.md`** — the loop playbook: queue = `forge-loop-ready` GitHub issues →
+  return path first → worktree maker (fixer/builder) → lint+eval gate →
+  fresh-context verifier → ready PR `Closes #N` → toggle-aware merge step.
+  Standing config in **`LOOP-STATE.md`** (caps · escalate · roles · lessons);
+  tracker/label/domain config for shaping skills in `docs/agents/`.
+- **`forge-loop.command.md`** — optional `/forge-loop` (one iteration). Install:
+  `cp maintenance/forge-loop.command.md .claude/commands/forge-loop.md`.
+- **`loop-push-guard.sh`** — PreToolUse hook making Wall 1's loop exception
+  mechanical: `git push` allowed ONLY as `git push [-u] origin agent/<branch>` —
+  no force/delete/tags/refspecs/other remotes; everything else stays human.
 
 ## Cutting a release (tag-on-demand)
 

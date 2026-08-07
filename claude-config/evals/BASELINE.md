@@ -19,9 +19,14 @@ improve.
 | /maintain | 5     | 5/5           | 2026-06-25   | provisional, 1× (E2 tightened → surfaced + fixed a gates-field gap) |
 | /brainstorm | 5   | 5/5           | 2026-06-25   | provisional, 1× (added H3 brief-persistence) |
 | /improve-arch | 6 | 6/6           | 2026-06-25   | provisional, 1× (H1 now requires a specific shallowness diagnosis) |
+| /automerge | 16  | 16/16         | 2026-08-06   | provisional, 1× (graded against the command + guard-hook text; E4-E8 + A4 mechanically enforced and covered by the committed `maintenance/tests/run.sh` suite — CI, labels, paths, behind, threads, review verdict, head-SHA-bound approval, self-approval; H4 approve-last ordering graded against the loop text) |
+| /forge-loop | 12 | 12/12         | 2026-08-06   | provisional, 1× (graded against the command + guard text; push/merge scope backed by a 438-case guard behavior suite; +H4 continuous run, +H5 explicit-scope authorization, +E4 no-progress stop) |
 
-**Coverage: 12 of 12 commands** (`/start` excluded — pure onboarding). **71 cases**
-total (was 5 suites / 31 cases before 2026-06-25; +verifier E4 on 2026-08-01).
+**Coverage: 14 of 14 commands** (`/start` excluded — pure onboarding). **99 cases**
+total (was 5 suites / 31 cases before 2026-06-25; +verifier E4 on 2026-08-01;
++/automerge and /forge-loop suites, 9 cases each, on 2026-08-04; forge-loop
+9 -> 12 and automerge 9 -> 11 on 2026-08-06, for continuous operation and
+mechanical contract enforcement).
 
 > **PROVISIONAL baseline.** Cases were executed against the machinery and graded
 > strictly vs each PASS-IF — /assess, verifier and /improve at 3× (median of 3),

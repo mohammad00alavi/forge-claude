@@ -13,8 +13,8 @@ if [ -d "$TARGET/.claude/hooks" ] && compgen -G "$TARGET/.claude/hooks/*.sh" >/d
 fi
 echo ""
 echo "Forge v3.9 installed into: $TARGET"
-echo "  13 agents, 12 commands, forge-playbook skill, learning loop,"
-echo "  git-guardrail + routing-ledger hooks, gated settings."
+echo "  13 agents, 14 commands, forge-playbook skill, learning loop,"
+echo "  git-guardrail + loop/merge-guard + routing-ledger hooks, gated settings."
 echo ""
 echo "Start:  cd $TARGET && claude  ->  /start  (or /assess \"your idea\")"
 echo "Note: the hook needs the path \$CLAUDE_PROJECT_DIR — Claude Code sets this"
