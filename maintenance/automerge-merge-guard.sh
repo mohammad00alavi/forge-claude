@@ -88,6 +88,22 @@ fi
 has 'actions/(variables|secrets)' \
   && block "'$COMMAND' targets the repository variable/secret API. LOOP_AUTOMERGE is the human's switch — an agent never arms its own gate."
 
+# The human's markers are only a stop if an agent cannot lift them. The merge
+# guard reads automerge:halt / human:* and refuses while they are present, so
+# removing a label (or closing the halt issue) would defeat the stop exactly the
+# way arming LOOP_AUTOMERGE would defeat the toggle. Same shape of wall.
+hasw gh && has 'remove-label' && has '(automerge:halt|human:)' \
+  && block "'$COMMAND' removes a human marker (automerge:halt / human:*). Those are the human's stop — an agent never lifts the thing that is holding it. Ask the human."
+hasw gh && hasw issue && hasw close && has 'automerge:halt' \
+  && block "'$COMMAND' closes the automerge:halt issue that is freezing merges. That is the human's to clear."
+# forge-loop-ready is the loop's work authorization — the direct counterpart of
+# LOOP_AUTOMERGE. An agent that can label its own issue selects its own work.
+# ONLY that label: ADDING a human:* label hands authority TO the human, which is
+# what propose-and-defer and the escalate rule require the loop to do, so it is
+# allowed. Removing one takes authority back, and stays walled above.
+hasw gh && has 'add-label' && has 'forge-loop-ready' \
+  && block "'$COMMAND' applies the queue-authorization label. The human labels the queue; an agent may draft an issue as needs-triage but never selects its own work."
+
 # A review verdict is the reviewer's. An agent that can dismiss a
 # changes-requested review, or submit its own approval, is not gated by it.
 hasw gh && hasw review && has '(dismiss|approve|request-changes)' \
@@ -197,6 +213,7 @@ PRJSON=$(gh pr view "$PRNUM" -R "$REPO" \
 [ -z "$PRJSON" ] && block "cannot read PR #$PRNUM from $REPO, so its merge conditions cannot be verified. Leave it for the human."
 
 jqf() { printf '%s' "$PRJSON" | jq -r "$1" 2>/dev/null; }
+HEADOID_FOR_GATE=$(jqf '.headRefOid // ""')
 
 # Scope: agents merge only THEIR OWN PRs — head ref must be an agent/* branch.
 HEADREF=$(jqf '.headRefName // ""')
@@ -233,11 +250,26 @@ case "$HALT" in
 esac
 
 # Protected paths are always human-merged, toggle regardless.
-PROTECTED=$(jqf '[.files[]?.path | select(test("^\\.github/|^\\.claude/|(^|/)\\.env|(^|/)(auth|payments|billing|secrets)/|^infra/|(^|/)Dockerfile|(^|/)docker-compose|(^|/).*\\.tf$"))] | length')
+# MAINTAINER-ONLY divergence from the shipped guard: besides the generic
+# escalate set (CI config, secrets, infra), THIS repo's own machinery is
+# human-merged — the walls, the gate, the installer, the loop's state and its
+# tests. Keep this in lockstep with maintenance/forge-loop-merge-step.md §4 and
+# maintenance/LOOP-STATE.md: a path the contract calls out but the wall does not
+# enforce is a promise, not a wall.
+PROTECTED=$(jqf '
+  [ .files[]?.path
+    | select(
+        test("^\\.github/|^\\.claude/|(^|/)\\.env|(^|/)(auth|payments|billing|secrets)/|^infra/|(^|/)Dockerfile|(^|/)docker-compose|\\.tf$")
+        or test("^claude-config/hooks/|^claude-config/settings\\.json$")
+        or test("^claude-config/evals/BASELINE\\.md$|five-walls\\.md$")
+        or test("^install\\.sh$|^maintenance/(forge-lint|release-gate|automerge-merge-guard|loop-push-guard)\\.sh$")
+        or test("^maintenance/tests/|^maintenance/LOOP-STATE\\.md$|\\.workflow\\.yml$")
+      )
+  ] | length')
 case "$PROTECTED" in
   ''|*[!0-9]*) block "cannot read PR #$PRNUM's file list. Leave the merge to the human." ;;
   0) ;;
-  *) block "PR #$PRNUM touches $PROTECTED protected path(s) (.github/, .claude/, .env*, auth/payments/billing, infra, containers). Those are always human-merged." ;;
+  *) block "PR #$PRNUM touches $PROTECTED escalate path(s) — the generic set (.github/, .claude/, .env*, auth/payments/billing, infra, containers) or this repo's machinery (claude-config/hooks/, settings.json, evals/BASELINE.md, five-walls, install.sh, the maintenance gate/guards/tests/LOOP-STATE, any *.workflow.yml). Those are always human-merged, toggle regardless." ;;
 esac
 
 # Behind base, conflicted, or otherwise not mergeable right now.
@@ -305,7 +337,13 @@ case "$RD" in
     fi ;;
 esac
 
-# Fresh gate — the gate decides done, never a remembered result.
+# Fresh gate — the gate decides done, never a remembered result, and never a
+# result from other code. Sharing the object store makes ROOT *a* checkout of
+# this repo; it does not make it THIS PR's checkout, so require ROOT to be
+# sitting on the PR head before its verdict counts.
+GATEOID=$(cd "$ROOT" 2>/dev/null && git rev-parse HEAD 2>/dev/null)
+[ -n "$GATEOID" ] && [ "$GATEOID" = "$HEADOID_FOR_GATE" ] \
+  || block "the fresh gate must run on PR #$PRNUM's own code: $ROOT is at ${GATEOID:-unreadable}, the PR head is $HEADOID_FOR_GATE. cd into the PR's worktree and re-issue the merge."
 bash "$ROOT/maintenance/forge-lint.sh" >/dev/null 2>&1 \
   || block "forge-lint is red in $ROOT. Fix the gate (bash maintenance/forge-lint.sh) or leave the PR ready with a comment. Toggle-on never overrides a red gate."
 

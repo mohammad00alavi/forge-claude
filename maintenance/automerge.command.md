@@ -15,7 +15,8 @@ repo explicitly: `-R mohammad00alavi/forge-claude` (cwd is not a fact you have).
 
 ## on
 
-1. `gh variable set LOOP_AUTOMERGE --body true -R mohammad00alavi/forge-claude`
+1. **Print this line for the maintainer to run themselves** — the guards refuse
+   it from an agent by design: `gh variable set LOOP_AUTOMERGE --body true -R mohammad00alavi/forge-claude`
 2. Confirm labels exist (create any missing): `automerge:halt`, `human:authorize`,
    `human:decide` — `gh label list -R mohammad00alavi/forge-claude`.
 3. Settle the review policy: does this repo have a reviewer (review bot,
@@ -32,7 +33,8 @@ repo explicitly: `-R mohammad00alavi/forge-claude` (cwd is not a fact you have).
 
 ## off
 
-1. `gh variable set LOOP_AUTOMERGE --body false -R mohammad00alavi/forge-claude`
+1. **Print this line for the maintainer to run themselves** (same reason as `on`):
+   `gh variable set LOOP_AUTOMERGE --body false -R mohammad00alavi/forge-claude`
 2. On every open agent-owned PR, comment that auto-merge was disarmed by the
    maintainer, so a later reader knows why it waited for a human.
 3. Report the new state.

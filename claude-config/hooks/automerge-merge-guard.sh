@@ -88,6 +88,22 @@ fi
 has 'actions/(variables|secrets)' \
   && block "'$COMMAND' targets the repository variable/secret API. LOOP_AUTOMERGE is the human's switch — an agent never arms its own gate."
 
+# The human's markers are only a stop if an agent cannot lift them. The merge
+# guard reads automerge:halt / human:* and refuses while they are present, so
+# removing a label (or closing the halt issue) would defeat the stop exactly the
+# way arming LOOP_AUTOMERGE would defeat the toggle. Same shape of wall.
+hasw gh && has 'remove-label' && has '(automerge:halt|human:)' \
+  && block "'$COMMAND' removes a human marker (automerge:halt / human:*). Those are the human's stop — an agent never lifts the thing that is holding it. Ask the human."
+hasw gh && hasw issue && hasw close && has 'automerge:halt' \
+  && block "'$COMMAND' closes the automerge:halt issue that is freezing merges. That is the human's to clear."
+# forge-loop-ready is the loop's work authorization — the direct counterpart of
+# LOOP_AUTOMERGE. An agent that can label its own issue selects its own work.
+# ONLY that label: ADDING a human:* label hands authority TO the human, which is
+# what propose-and-defer and the escalate rule require the loop to do, so it is
+# allowed. Removing one takes authority back, and stays walled above.
+hasw gh && has 'add-label' && has 'forge-loop-ready' \
+  && block "'$COMMAND' applies the queue-authorization label. The human labels the queue; an agent may draft an issue as needs-triage but never selects its own work."
+
 # A review verdict is the reviewer's. An agent that can dismiss a
 # changes-requested review, or submit its own approval, is not gated by it.
 hasw gh && hasw review && has '(dismiss|approve|request-changes)' \

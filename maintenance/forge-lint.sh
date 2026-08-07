@@ -41,16 +41,32 @@ if grep -rqi '## System fixes' "$CFG"/memory/learnings.md 2>/dev/null; then
   bad "'## System fixes' in learnings.md — machinery changes belong in CHANGELOG.md"
 else pass "learnings.md holds no machinery log"; fi
 
-# 4. Safety walls intact in settings.json. The push wall is hook-scoped since
-# v3.9.5: force-push/merge/deploy stay denied, settings-edit stays locked, and
-# BOTH loop guards (push scope + merge toggle) must be wired as PreToolUse hooks.
+# 4. Safety walls intact in settings.json. Checked against the STRUCTURE, not
+# the prose: every guard filename also appears in permissions._comment, so a
+# whole-file grep passed on the comment alone and could not see whether the
+# hooks were wired at all.
 S="$CFG/settings.json"
-if grep -Fq '"Bash(git push --force:*)"' "$S" && grep -Fq '"Bash(git merge:*)"' "$S" \
-   && grep -Fq '"Bash(*deploy*)"' "$S" && grep -Fq 'Edit(.claude/settings.json)' "$S" \
-   && grep -Fq 'block-dangerous-git.sh' "$S" && grep -Fq 'loop-push-guard.sh' "$S" \
-   && grep -Fq 'automerge-merge-guard.sh' "$S"; then
-  pass "settings.json walls intact (force-push/merge/deploy denied; guards wired; settings-edit gated)"
-else bad "settings.json is missing a wall (force-push/merge/deploy), a guard hook (git/push/merge), or the settings-edit gate"; fi
+walls_ok=1
+for rule in '"Bash(git push --force:*)"' '"Bash(git merge:*)"' '"Bash(*deploy*)"' \
+            'Edit(.claude/settings.json)' 'Edit(.claude/**)' 'Write(.claude/**)' \
+            'Edit(.github/**)' 'Write(.github/**)'; do
+  grep -Fq "$rule" "$S" || { warn "deny rule missing from settings.json: $rule"; walls_ok=0; }
+done
+if command -v jq >/dev/null 2>&1; then
+  WIRED=$(jq -r '[.hooks.PreToolUse[]? | select(.matcher=="Bash") | .hooks[]?.command] | join(" ")' "$S" 2>/dev/null)
+  for h in block-dangerous-git.sh loop-push-guard.sh automerge-merge-guard.sh; do
+    case "$WIRED" in
+      *"$h"*) [ -f "$CFG/hooks/$h" ] || { warn "$h is wired but missing from $CFG/hooks/"; walls_ok=0; } ;;
+      *) warn "$h is not wired as a PreToolUse Bash hook (prose mentions do not count)"; walls_ok=0 ;;
+    esac
+  done
+else warn "jq absent — cannot verify the PreToolUse wiring structurally"; fi
+[ "$walls_ok" = 1 ] && pass "settings.json walls intact (denies present; all three guards wired as Bash PreToolUse hooks and present on disk)" \
+                    || bad  "settings.json is missing a deny rule, or a guard hook is unwired/missing (see WARN)"
+
+# NOTE: the escalate list <-> guard lockstep is checked by running the guard
+# against every path the contract names — see maintenance/tests/run.sh. It
+# cannot be done soundly by text-matching the guard's regex from here.
 
 # 5. Every reference cited in SKILL.md exists on disk.
 SKILL=$(find "$CFG"/skills -name SKILL.md 2>/dev/null | head -1)

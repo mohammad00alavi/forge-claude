@@ -1,7 +1,7 @@
 {
   "forceLoginMethod": "claudeai",
   "permissions": {
-    "_comment": "MODEL (v3.9.5): Bash(*) allows all bash so runs flow without operator/env prompts. SAFETY = the deny list (deny overrides allow): git merge / force-push DENIED; other agent pushes are branch-scoped by the hooks (PUSH WALL below); home-dir reads (~/.nvm,.ssh,.aws,.config,etc) DENIED (no probing your machine); destroyers (rm -rf, publish, deploy) DENIED; in-project secrets (.env, auth, payments) DENIED. HARD-LOCKED: Edit and Write of .claude/settings.json are DENIED so no agent can rewrite these rules or remove the walls; a human edits this file by hand. Note Bash(*) stays allowed, so a raw shell write to this path is NOT covered by these tool-permission rules — the block-dangerous-git.sh PreToolUse hook closes that gap for full lockdown. PUSH WALL (v3.9.5): the blanket push deny moved into the hooks so the forge-loop can publish its PR branches: block-dangerous-git.sh blocks every push that is not exactly 'git push [-u] origin agent/<branch>', and loop-push-guard.sh validates that shape strictly (no force/delete/refspecs/other remotes). Merging stays walled by automerge-merge-guard.sh until the human runs /automerge on. This is Professor's allow-all-bash smoothness BUT keeping the mechanical git gate instead of Professor's prose gate \u2014 stronger, costs nothing.",
+    "_comment": "MODEL (v3.9.5): Bash(*) allows all bash so runs flow without operator/env prompts. SAFETY = the deny list (deny overrides allow): git merge / force-push DENIED; other agent pushes are branch-scoped by the hooks (PUSH WALL below); home-dir reads (~/.nvm,.ssh,.aws,.config,etc) DENIED (no probing your machine); destroyers (rm -rf, publish, deploy) DENIED; in-project secrets (.env, auth, payments) DENIED. HARD-LOCKED: Edit and Write of .claude/** and .github/** are DENIED, so no agent can rewrite these rules, edit the guard hooks that enforce them, or change CI. A human edits those by hand. The hooks themselves only see Bash calls, which is why the tool-permission deny is what covers Edit/Write. Note Bash(*) stays allowed, so a raw shell write to this path is NOT covered by these tool-permission rules — the block-dangerous-git.sh PreToolUse hook closes that gap for full lockdown. PUSH WALL (v3.9.5): the blanket push deny moved into the hooks so the forge-loop can publish its PR branches: block-dangerous-git.sh blocks every push that is not exactly 'git push [-u] origin agent/<branch>', and loop-push-guard.sh validates that shape strictly (no force/delete/refspecs/other remotes). Merging stays walled by automerge-merge-guard.sh until the human runs /automerge on. This is Professor's allow-all-bash smoothness BUT keeping the mechanical git gate instead of Professor's prose gate \u2014 stronger, costs nothing.",
     "allow": [
       "Edit",
       "Write",
@@ -55,7 +55,11 @@
       "Bash(cat /Users/**/.ssh:*)",
       "Bash(cat /Users/**/.aws:*)",
       "Edit(.claude/settings.json)",
-      "Write(.claude/settings.json)"
+      "Write(.claude/settings.json)",
+      "Edit(.claude/**)",
+      "Write(.claude/**)",
+      "Edit(.github/**)",
+      "Write(.github/**)"
     ],
     "ask": []
   },

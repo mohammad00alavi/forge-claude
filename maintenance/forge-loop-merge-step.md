@@ -54,10 +54,22 @@ remembered earlier result. Red gate → fix or leave ready with a comment.
 ## 4. Eligibility
 
 - No `human:*` label on the PR; no `automerge:halt` on the PR or any open issue.
-- Diff touches no escalate path: `claude-config/hooks/**`,
-  `claude-config/settings.json`, `install.sh`, `maintenance/forge-lint.sh`,
-  `maintenance/release-gate.sh`, `maintenance/automerge-merge-guard.sh`, any
-  `*.workflow.yml`. Those PRs are always human-merged, toggle regardless.
+- Diff touches no escalate path. Those PRs are always human-merged, toggle
+  regardless, and `maintenance/automerge-merge-guard.sh` enforces this list
+  mechanically — keep the two in lockstep, or the list is a promise rather than
+  a wall:
+  - the walls and their tests — `claude-config/hooks/**`,
+    `claude-config/settings.json`, `maintenance/automerge-merge-guard.sh`,
+    `maintenance/loop-push-guard.sh`, `maintenance/tests/**`
+  - the gates and the release path — `maintenance/forge-lint.sh`,
+    `maintenance/release-gate.sh`, any `*.workflow.yml`
+  - what the machinery is judged by — `claude-config/evals/BASELINE.md`, the
+    five-walls reference, `maintenance/LOOP-STATE.md` (the loop's own caps and
+    escalate list)
+  - `install.sh`
+  - plus the generic set the shipped guard also enforces: `.github/**`,
+    `.claude/**`, `.env*`, auth/payments/billing/secrets, infra, containers,
+    `*.tf`
 
 ## 5. Merge
 

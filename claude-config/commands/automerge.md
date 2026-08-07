@@ -1,5 +1,5 @@
 ---
-description: "Human-only toggle: when ON, agents may squash-merge their own PRs — but only green, review-clean, up-to-date ones that pass this project's gate. OFF (default): agents always stop at a ready PR and you merge. Mechanically enforced by the automerge-merge-guard hook."
+description: "Human-only toggle: when ON, agents may squash-merge their own PRs — but only ones that are CI-green, review-clean and up to date. OFF (default): agents always stop at a ready PR and you merge. The automerge-merge-guard hook enforces every condition it can read from GitHub."
 ---
 
 Flip or report this project's auto-merge toggle. **This command is for the
@@ -13,7 +13,8 @@ requests, and only under the contract below. Everything else stays walled.
 First, resolve the repo explicitly (never assume cwd):
 `REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)` — abort with a
 clear message if there is no GitHub remote or no write access. Use `-R "$REPO"`
-on every `gh` call. Then parse the argument (`on` / `off` / empty = status).
+on every `gh` call — except the merge and disarm commands, where the repo must be
+spelled literally (the guard cannot expand shell variables). Then parse the argument (`on` / `off` / empty = status).
 
 ## on
 
@@ -31,21 +32,27 @@ on every `gh` call. Then parse the argument (`on` / `off` / empty = status).
    human choose, because the guard requires an approving review by default:
    - a reviewer exists → nothing to do; PRs need that approval to merge;
    - no reviewer, and the human accepts the loop's fresh-context **verifier** as
-     the only checker → `gh variable set LOOP_REQUIRE_APPROVAL --body false -R "$REPO"`,
+     the only checker → `gh variable set LOOP_REQUIRE_APPROVAL --body false -R <owner>/<repo>` — again
+     printed for the human to run, not run by the agent —
      and say plainly what that means: no second party sees the change before it
      lands, so the verifier and CI are the whole gate;
    - no reviewer and they are not comfortable with that → leave it required and
      auto-merge simply won't fire until someone reviews. That is a valid,
      safe outcome, not a misconfiguration.
-3. `gh variable set LOOP_AUTOMERGE --body true -R "$REPO"`
+3. **Print this line for the human to run themselves** — the guards refuse it
+   from an agent, deliberately, since an agent that can arm its own gate is not
+   gated by it: `gh variable set LOOP_AUTOMERGE --body true -R <owner>/<repo>`
 4. Report what is now permitted, restating the contract in one line, and name
    the review policy in force (`approval required` vs `verifier-only`).
 
 ## off
 
-1. `gh variable set LOOP_AUTOMERGE --body false -R "$REPO"`
-2. `gh pr merge --disable-auto` any agent PRs armed earlier; comment on open
-   agent PRs that auto-merge was disarmed, so the wait is explained.
+1. **Print this line for the human to run themselves** (same reason as `on`):
+   `gh variable set LOOP_AUTOMERGE --body false -R <owner>/<repo>`
+2. `gh pr merge <N> --disable-auto -R <owner>/<repo>` for any agent PR armed
+   earlier — PR by number, repo spelled literally, which is the only disarm
+   shape the guard accepts. Then comment on open agent PRs that auto-merge was
+   disarmed, so the wait is explained.
 3. Report the new state.
 
 ## status (no argument)
@@ -98,7 +105,7 @@ non-numeric target, or a second repo named anywhere is blocked.
 7. Never `--admin`. Anything unmet → leave the PR **ready** with a comment
    saying exactly what blocked it.
 
-**The hook enforces all of it, not just the toggle.** `automerge-merge-guard.sh`
+**The hook enforces every condition it can read from GitHub.** `automerge-merge-guard.sh`
 verifies the command shape, the literal repo, `LOOP_AUTOMERGE`, and an `agent/*`
 head ref — and then reads the PR's real state from GitHub and refuses the merge
 unless every check has concluded green (a queued or running check blocks too),
@@ -107,5 +114,9 @@ diff touches no protected path, the branch is neither behind nor conflicted, and
 no review thread is unresolved. Unreadable state fails closed. This matters most
 in a repo with **no branch protection**, where `gh pr merge` would otherwise
 happily merge a red or stale PR: here green-before-merge is a wall, not a
-promise. Steps 1–6 remain the agent's job to *satisfy*; the hook is what makes
-skipping them impossible.
+promise. Steps 0–3 and 5–6 are verified by the hook, so skipping them is not possible.
+**Step 4 is the exception: no shipped hook can know a venture's gate commands**,
+so the project gate is the agent's obligation, with CI (step 2) as the mechanical
+signal that makes red visible. If your gate runs in CI, step 4 is covered by
+step 2; if it only runs locally, it is on the agent. (The maintainer edition of
+this guard does run a gate, because in that one repo it knows what the gate is.)

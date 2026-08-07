@@ -524,3 +524,72 @@ issue. Agents may DRAFT issues (labelled `needs-triage`); only the human's
   the pattern requires a non-letter after it. Committed suite 42 → 52 cases,
   pinning both sides: the three submission spellings refused, reply and
   resolveReviewThread still allowed.
+
+- **The maintainer escalate list was a promise, not a wall (2026-08-07, review
+  follow-up).** The merge-step contract §4 says PRs touching this repo's
+  machinery — `claude-config/hooks/**`, `claude-config/settings.json`,
+  `install.sh`, `maintenance/forge-lint.sh`, `maintenance/release-gate.sh`,
+  `maintenance/automerge-merge-guard.sh`, any `*.workflow.yml` — are always
+  human-merged. The maintainer guard, however, was carrying the SHIPPED guard's
+  generic path list (CI config, secrets, infra), which names none of them: an
+  agent could have auto-merged a PR rewriting the very guard judging it. The
+  maintainer guard now enforces the machinery set explicitly, and it is wider
+  than the contract text was: the push guard and `maintenance/tests/` (weaken
+  the tests and the walls follow), `claude-config/evals/BASELINE.md` and the
+  five-walls reference and `maintenance/LOOP-STATE.md` (what the machinery is
+  judged by — previously listed only in LOOP-STATE, enforced nowhere). The
+  contract and LOOP-STATE now point at one list instead of two, and the guard
+  carries a comment tying itself to them. Committed suite 52 → 65 cases: each
+  of the twelve paths blocked independently, plus an ordinary
+  machinery-adjacent file (`claude-config/agents/builder.md`) that must still
+  merge, so the wall is not simply "block everything".
+
+- **Doc/wall parity audit — the promises that had no walls (2026-08-07).** Two
+  escalate-path divergences in two days made the class worth hunting
+  deliberately, so a three-lens audit walked every documented condition and
+  asked what actually enforces it, proving each answer by running the guards.
+  Defeat paths found and closed:
+  - **The walls were editable.** `Edit`/`Write` were denied only for
+    `.claude/settings.json`, and the PreToolUse hooks match `Bash` only — so one
+    `Edit` turning a guard's `exit 2` into `exit 0` removed a wall, unseen by
+    every hook. `.claude/**` and `.github/**` are now denied for both tools.
+  - **The emergency stop could be lifted by the agent it stopped.** The merge
+    guard reads `automerge:halt` / `human:*`, but nothing refused
+    `gh pr edit --remove-label` or closing the halt issue. Both are now walled,
+    as is applying `forge-loop-ready` — the queue's authorization label, and the
+    exact counterpart of the toggle the guards already protect hardest.
+    **Authority moves one way.** The first cut of this wall also refused
+    *adding* a `human:*` label, which deadlocked the loop's own documented exits:
+    propose-and-defer and the escalate rule both require it to apply
+    `human:decide`/`human:authorize`, so the first oversized issue or escalate
+    path would have hit a guard-blocked exit route. Adding one hands the decision
+    to the human and grants the agent nothing, so it is allowed; removing one, or
+    self-applying `forge-loop-ready`, takes authority and stays refused. Both
+    directions are pinned in the suite.
+  - **The maintainer gate could run on the wrong code.** Sharing a git object
+    store makes a directory *a* checkout of this repo, not *this PR's* checkout,
+    so `forge-lint` green anywhere counted. The gate now requires `ROOT`'s HEAD
+    to equal the PR head.
+  - **`forge-lint`'s "walls intact" check passed on prose.** Every guard
+    filename also appears in `permissions._comment`, so a whole-file grep could
+    not see whether the hooks were wired at all. It now asserts the real
+    `hooks.PreToolUse` structure with jq and that each hook exists on disk —
+    verified by unwiring a hook and watching the check go red.
+  - **The test suite was partly vacuous.** The fake `gh` hard-coded CI, labels,
+    threads, behind-state and the toggle, so those walls had no test that could
+    fail. Every field is now fixture-driven; proved by mutation — disabling the
+    CI wall in a copy of the guard now turns the suite red, where before it
+    stayed green.
+  - **Lockstep is now a gate.** A test reads the escalate paths out of the
+    contract and runs the guard against each, so adding a path to the doc
+    without adding it to the wall fails the suite (verified by adding a fake
+    path and watching it fail).
+  Doc corrections where the code was right and the prose was not: `/automerge`
+  no longer claims the hook enforces the project gate (no shipped hook can know
+  a venture's gate commands — CI is the mechanical signal, step 4 is the
+  agent's); `/automerge on|off` now prints the toggle command for the human
+  instead of running it, since the guards refuse it from an agent by design and
+  the documented path could not execute; the disarm is spelled in the only shape
+  the whitelist accepts; the shipped hooks no longer cite a settings "ask-gate"
+  that v3.9.5 removed; and LOOP-STATE's caps are labelled advisory, because the
+  guard is stateless and counts nothing. Committed suite 65 → 104 cases.

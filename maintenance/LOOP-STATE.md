@@ -5,6 +5,10 @@ Edit it by hand; the loop itself may only append to **Lessons**.
 
 ## Caps
 
+**Advisory, not mechanical.** The merge guard is stateless — it counts
+nothing across a run — so these are the loop's own pacing discipline. The
+escalate list below IS mechanical.
+
 - **In-flight:** max 2 open agent PRs at once; at the cap, run the return path only.
 - **Maker rounds:** max 3 per PR per run; still red → leave ready + comment the blocker.
 - **New issues per run:** 1. One issue, one PR, one worktree.
@@ -12,9 +16,10 @@ Edit it by hand; the loop itself may only append to **Lessons**.
 
 ## Escalate — never merged autonomously, toggle regardless
 
-The merge contract §4 list (`maintenance/forge-loop-merge-step.md`), plus:
-anything touching `claude-config/evals/BASELINE.md`, the five-walls text, or
-this file's Caps section → `human:authorize` and stop at the ready PR.
+The merge contract §4 list (`maintenance/forge-loop-merge-step.md`), which now
+includes `claude-config/evals/BASELINE.md`, the five-walls text and this file —
+so the escalate set lives in ONE place and the merge guard enforces all of it.
+Anything on that list → `human:authorize` and stop at the ready PR.
 
 ## Roles
 

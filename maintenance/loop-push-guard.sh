@@ -21,8 +21,9 @@
 #
 # Residual, by design: shell EXPANSION cannot be resolved by a string guard —
 # $VAR, eval, command substitution, and glob-spelled paths reach the shell as
-# something this hook never saw. The settings ask-gate, branch protection, and
-# human review back this wall.
+# something this hook never saw. Branch protection and human review back this
+# wall — the shipped settings.json ALLOWS the sanctioned push shape outright, so
+# there is no ask-prompt behind it.
 
 INPUT=$(cat)
 

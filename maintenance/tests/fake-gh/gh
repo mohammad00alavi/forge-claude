@@ -10,11 +10,22 @@
 # review was submitted against. They differ in the stale fixtures.
 F="${FIXTURE:-fresh-approval}"
 
-HEAD_OID="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+# The maintainer guard requires its gate to run on the PR's own code, so the
+# fixture head must match the checkout the test runs in. gate-wrong-code forces
+# a mismatch to exercise that wall.
+HEAD_OID=$(git rev-parse HEAD 2>/dev/null || echo aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa)
 APPROVED_OID="$HEAD_OID"
 RD="APPROVED"
+FILES='[{"path":"src/app.ts"}]'
 REQUIRE_APPROVAL="unset"     # unset -> `gh variable get` exits 1, as GitHub does
 REVIEWS_READABLE=1
+# Everything the merge guard reads is fixture-driven, so each wall has a test
+# that can actually go red. Defaults are the all-green PR.
+TOGGLE="true"
+ROLLUP='[{"conclusion":"SUCCESS"}]'
+LABELS='[]'
+MSS="CLEAN"; MERGEABLE="MERGEABLE"; STATE="OPEN"
+THREADS=0; HALT_ISSUES=0
 
 case "$F" in
   fresh-approval)        ;;
@@ -25,14 +36,44 @@ case "$F" in
   no-review)             RD=""; APPROVED_OID="" ;;
   no-review-optout)      RD=""; APPROVED_OID=""; REQUIRE_APPROVAL="false" ;;
   reviews-unreadable)    REVIEWS_READABLE=0 ;;
+  gate-wrong-code)       HEAD_OID="cccccccccccccccccccccccccccccccccccccccc"; APPROVED_OID="$HEAD_OID" ;;
+  toggle-off)            TOGGLE="false" ;;
+  toggle-unreadable)     TOGGLE="" ;;
+  ci-red)                ROLLUP='[{"conclusion":"FAILURE"}]' ;;
+  ci-pending)            ROLLUP='[{"status":"IN_PROGRESS","conclusion":null}]' ;;
+  ci-none)               ROLLUP='[]' ;;
+  label-halt)            LABELS='[{"name":"automerge:halt"}]' ;;
+  label-human)           LABELS='[{"name":"human:authorize"}]' ;;
+  halt-issue-open)       HALT_ISSUES=1 ;;
+  behind)                MSS="BEHIND" ;;
+  dirty)                 MSS="DIRTY"; MERGEABLE="CONFLICTING" ;;
+  pr-closed)             STATE="CLOSED" ;;
+  thread-open)           THREADS=2 ;;
+  # escalate-path fixtures: everything else green, only the diff differs
+  path-guard)      FILES='[{"path":"claude-config/hooks/block-dangerous-git.sh"}]' ;;
+  path-settings)   FILES='[{"path":"claude-config/settings.json"}]' ;;
+  path-lint)       FILES='[{"path":"maintenance/forge-lint.sh"}]' ;;
+  path-mergeguard) FILES='[{"path":"maintenance/automerge-merge-guard.sh"}]' ;;
+  path-pushguard)  FILES='[{"path":"maintenance/loop-push-guard.sh"}]' ;;
+  path-release)    FILES='[{"path":"maintenance/release-gate.sh"}]' ;;
+  path-workflow)   FILES='[{"path":"maintenance/forge-health.workflow.yml"}]' ;;
+  path-installer)  FILES='[{"path":"install.sh"}]' ;;
+  path-baseline)   FILES='[{"path":"claude-config/evals/BASELINE.md"}]' ;;
+  path-fivewalls)  FILES='[{"path":"claude-config/skills/forge-playbook/references/five-walls.md"}]' ;;
+  path-loopstate)  FILES='[{"path":"maintenance/LOOP-STATE.md"}]' ;;
+  path-tests)      FILES='[{"path":"maintenance/tests/run.sh"}]' ;;
+  path-ordinary)   FILES='[{"path":"claude-config/agents/builder.md"}]' ;;
 esac
+# FAKE_FILES=<path> serves an arbitrary single changed file, so a test can drive
+# the guard with a path read straight out of the contract doc.
+[ -n "${FAKE_FILES:-}" ] && FILES="[{\"path\":\"$FAKE_FILES\"}]" 
 
 case "$1 $2" in
   "repo view")    echo "mohammad00alavi/forge-claude"; exit 0 ;;
-  "issue list")   echo 0; exit 0 ;;
+  "issue list")   echo "$HALT_ISSUES"; exit 0 ;;
   "variable get")
     case "$3" in
-      LOOP_AUTOMERGE) echo "true"; exit 0 ;;
+      LOOP_AUTOMERGE) [ -z "$TOGGLE" ] && exit 1; echo "$TOGGLE"; exit 0 ;;
       LOOP_REQUIRE_APPROVAL)
         [ "$REQUIRE_APPROVAL" = "unset" ] && exit 1
         echo "$REQUIRE_APPROVAL"; exit 0 ;;
@@ -45,7 +86,7 @@ esac
 if [ "$1" = "api" ] && [ "$2" = "graphql" ]; then
   ALL="$*"
   case "$ALL" in
-    *reviewThreads*) echo 0; exit 0 ;;
+    *reviewThreads*) echo "$THREADS"; exit 0 ;;
     *reviews*)
       [ "$REVIEWS_READABLE" = "0" ] && exit 1
       # run.sh asserts on the guard's decision, so mimic gh --jq: the guard
@@ -63,8 +104,8 @@ fi
 
 if [ "$1" = "pr" ] && [ "$2" = "view" ]; then
   case "$3" in 42|5|7) HEAD="agent/gh-$3" ;; 99) HEAD="release/v3.9.4" ;; *) exit 1 ;; esac
-  printf '{"headRefName":"%s","headRefOid":"%s","statusCheckRollup":[{"conclusion":"SUCCESS"}],"labels":[],"files":[{"path":"src/app.ts"}],"mergeStateStatus":"CLEAN","mergeable":"MERGEABLE","state":"OPEN","reviewDecision":"%s"}\n' \
-    "$HEAD" "$HEAD_OID" "$RD"
+  printf '{"headRefName":"%s","headRefOid":"%s","statusCheckRollup":%s,"labels":%s,"files":%s,"mergeStateStatus":"%s","mergeable":"%s","state":"%s","reviewDecision":"%s"}\n' \
+    "$HEAD" "$HEAD_OID" "$ROLLUP" "$LABELS" "$FILES" "$MSS" "$MERGEABLE" "$STATE" "$RD"
   exit 0
 fi
 
